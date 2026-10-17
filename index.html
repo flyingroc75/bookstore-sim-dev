@@ -50,6 +50,8 @@
                background:#c07f3a; border:2px solid #ffd98a; font-weight:bold; color:#fff8ea;
                box-shadow:0 4px 16px rgba(0,0,0,.55); }
   #actionBtn:hover { background:#d18f47; }
+  @keyframes shakeX { 0%,100% { transform:translateX(0); } 20% { transform:translateX(-7px); } 40% { transform:translateX(6px); } 60% { transform:translateX(-4px); } 80% { transform:translateX(3px); } }
+  #actionBtn.shake { animation:shakeX .38s ease; border-color:#e08a8a; }
   .swatch { display:inline-block; width:12px; height:16px; border-radius:2px; vertical-align:-2px; margin-right:5px; border:1px solid rgba(0,0,0,.4); }
   .coin { display:inline-block; width:.84em; height:.84em; border-radius:50%; vertical-align:-.13em;
           background:radial-gradient(circle at 35% 30%, #ffedb0, #f2c230 55%, #cf9a10);
@@ -456,10 +458,11 @@ function sellToBuyer(b) {
 
 // ---------- Haggling ----------
 const $ = id => document.getElementById(id);
+function denyShake() { const b = $('actionBtn'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
 function openHaggle(seller) {
   // Roy (2026-10-16): no haggling with full arms — the deal could never
   // complete and the panel trapped the player. Seller just keeps waiting.
-  if (carry.length >= CARRY_MAX) { flash('🧺 Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
+  if (carry.length >= CARRY_MAX) { denyShake(); flash('🧺 Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
   haggle = { seller, offer: Math.max(1, Math.floor(seller.ask * 0.6)) };
   seller.state = 'haggle';
   $('haggleTitle').textContent = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
@@ -621,6 +624,7 @@ canvas.addEventListener('pointerdown', e => {
   clickTarget = { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
 });
 $('actionBtn').addEventListener('click', doInteract);
+$('actionBtn').addEventListener('animationend', () => $('actionBtn').classList.remove('shake'));
 
 function moveToward(o, tx, ty, speed, dt) {
   const dx = tx - o.x, dy = ty - o.y, d = Math.hypot(dx, dy);
