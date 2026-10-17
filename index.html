@@ -13,7 +13,6 @@
   #hud b { color:#e8c87a; }
   #wrap { position:relative; }
   canvas { background:#4a3826; border:3px solid #8a6d3f; border-radius:8px; max-width:96vw; height:auto; touch-action:none; }
-  #hint { margin-top:8px; font-size:15px; min-height:20px; color:#ffd98a; text-align:center; }
   .panel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
            background:#241a10; border:2px solid #e8c87a; border-radius:10px; padding:20px 24px;
            min-width:340px; max-width:92%; box-shadow:0 10px 40px rgba(0,0,0,.6); display:none; z-index:5; }
@@ -218,7 +217,6 @@
 
   </div>
 </div>
-<div id="hint"></div>
 
 <script>
 "use strict";
@@ -519,6 +517,9 @@ function updateIntro(dt) {
   });
   if (landlord && landlord.leaving) {
     if (moveToward(landlord, DOOR.x, DOOR.y + 24, 175 * SPEED_MULT, dt)) landlord = null;
+  }
+  if (visitor && visitor.leaving) {
+    if (moveToward(visitor, DOOR.x, DOOR.y + 24, 175 * SPEED_MULT, dt)) visitor = null;
   }
   if (introStep >= 0) refreshHUD();
   updateEnding(dt);
@@ -953,17 +954,12 @@ function update(dt) {
   updateCats(dt);
   runChecker(dt);
 
-  // hint + action button
+  // action button only — the status text line under the canvas is gone (Roy, 2026-10-17)
   const st = nearStation();
-  let hint = '', canAct = false;
-  if (st === 'buy') { const s = frontSeller(); hint = s ? 'Haggle with the seller' : 'Buy counter: no seller waiting'; canAct = !!s; }
-  else if (st === 'sell') { const b = frontBuyer(); hint = b ? 'Ring up the sale (' + b.book.sellPrice + ' 🪙)' : 'Sell counter: no buyer waiting'; canAct = !!b; }
-  else if (st && st.startsWith('shelf-')) {
-    const g = st.slice(6);
-    canAct = carry.some(b => b.genre === g);
-    hint = canAct ? 'Stock your ' + GENRE_NAME[g] + ' books' : GENRE_NAME[g] + ' shelf (' + shelfStock[g].length + '/' + capacityOf(g) + ')';
-  }
-  $('hint').innerHTML = hint.split('🪙').join(COIN);
+  let canAct = false;
+  if (st === 'buy') { canAct = !!frontSeller(); }
+  else if (st === 'sell') { canAct = !!frontBuyer(); }
+  else if (st && st.startsWith('shelf-')) { canAct = carry.some(b => b.genre === st.slice(6)); }
   $('actionBtn').style.display = canAct ? 'block' : 'none';
   $('actionBtn').textContent = st === 'buy' ? 'Haggle' : st === 'sell' ? 'Ring up' : 'Stock books';
   if (flashT > 0) flashT -= dt;
@@ -1070,7 +1066,7 @@ function endDay() {
       : '<b>MYSTERIOUS MAN:</b> “Psst. Shelves are looking bare — <b>' + spaces + '</b>. I’ll fill every one tonight: <b>30</b> ' + COIN + ' a book. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”';   // Roy: he names only your cost, never the books' sell price — the trap stays hidden
     $('restockYes').textContent = coins >= pendingRestock.total ? 'Deal — pay ' + pendingRestock.total : 'You can\'t afford ' + pendingRestock.total;
     $('restockYes').disabled = coins < pendingRestock.total;
-    showClosing(() => { $('restockPanel').style.display = 'block'; });
+    showClosing(() => { stageVisitor(bySupplier ? 'sleazy' : 'man'); $('restockPanel').style.display = 'block'; });
     return;
   }
   showClosing(proceedAfterRestock);
@@ -1079,6 +1075,7 @@ function endDay() {
 let pendingRestock = null;
 $('restockYes').addEventListener('click', () => {
   if (!pendingRestock) return;
+  releaseVisitor();
   coins -= pendingRestock.total; refreshHUD();
   stats.restocked = pendingRestock.empty; stats.restockCost = pendingRestock.total;
   for (const g of activeGenres)
@@ -1088,14 +1085,26 @@ $('restockYes').addEventListener('click', () => {
   proceedAfterRestock();
 });
 $('restockNo').addEventListener('click', () => {
+  releaseVisitor();
   stats.restockDeclined = pendingRestock ? pendingRestock.empty : 0;
   pendingRestock = null;
   $('restockPanel').style.display = 'none';
   proceedAfterRestock();
 });
 
+// Roy (2026-10-17): when the Man (or the Supplier) knocks at night, the
+// conversation happens IN the shop — the player and the visitor stand on
+// the carpet while their dialog bar is up; the visitor leaves when it ends.
+let visitor = null;
+function stageVisitor(who) {
+  player.x = 446; player.y = 368; player.target = null; clickTarget = null;
+  visitor = { id: 997, x: 514, y: 368, state: 'haggle', kind: 'seller', genre: 'green', who, leaving: false,
+    look: who === 'man' ? { skin: '#c68863', hair: '#26221f', hairStyle: 1, coat: '#34303c' }
+                        : { skin: '#e8b48c', hair: '#2b2b2b', hairStyle: 0, coat: '#7a3a8c' } };
+}
+function releaseVisitor() { if (visitor) visitor.leaving = true; }
 function proceedAfterRestock() {
-  if (day % 3 === 0) showRent(); else composeTally();
+  if (day % 3 === 0) { stageVisitor('man'); showRent(); } else composeTally();
 }
 
 // ---------- Week's end: rent, and what happens if you can't pay ----------
@@ -1126,8 +1135,8 @@ $('rentPay').addEventListener('click', () => {
   $('winPanel').style.display = 'block';
   spawnConfetti();
 });
-$('winOk').addEventListener('click', () => { $('winPanel').style.display = 'none'; composeTally(); });
-$('rentFace').addEventListener('click', () => { $('rentPanel').style.display = 'none'; showBankrupt('rent'); });
+$('winOk').addEventListener('click', () => { $('winPanel').style.display = 'none'; releaseVisitor(); composeTally(); });
+$('rentFace').addEventListener('click', () => { $('rentPanel').style.display = 'none'; releaseVisitor(); showBankrupt('rent'); });
 function showBankrupt(kind) {
   if (kind === 'rep') {
     $('bankruptTitle').textContent = '🪦 Reputation: zero';
@@ -1149,6 +1158,7 @@ function spawnConfetti() {
   for (let i = 0; i < 160; i++) confetti.push({ x: rf(0, W), y: rf(-H * 0.6, -10), vx: rf(-14, 14), vy: rf(45, 120), rot: rf(0, 6.3), vr: rf(-4, 4), w: rf(5, 9), h: rf(8, 14), color: colors[i % colors.length], seed: rf(0, 9), life: rf(3.2, 4.6) });
 }
 function startEnding() {
+  visitor = null;
   endingStep = 0; playerLeaving = false;
   transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
   endBuyer = { id: 998, x: 446, y: 356, state: 'haggle', kind: 'buyer', genre: 'green',
@@ -1595,7 +1605,7 @@ function draw() {
     ctx.fillStyle = '#33261a'; ctx.fillRect(s.x + s.w / 2 - 50, s.y - 34, 100, 17);
     ctx.strokeStyle = GENRE_COLOR[g]; ctx.strokeRect(s.x + s.w / 2 - 50, s.y - 34, 100, 17);
     ctx.fillStyle = '#f3e9d2'; ctx.font = 'bold 11.5px Georgia'; ctx.textAlign = 'center';
-    ctx.fillText(GENRE_NAME[g].toUpperCase() + ' (' + shelfStock[g].length + '/' + capacityOf(g) + ')', s.x + s.w / 2, s.y - 21.5);
+    ctx.fillText(GENRE_NAME[g].toUpperCase(), s.x + s.w / 2, s.y - 21.5);   // name only — Roy cut the book counts (2026-10-17)
   }
   // counters — panelled wood, countertop slab, props
   for (const [c, label, isBuy] of [[BUY_COUNTER, 'WE BUY BOOKS', true], [SELL_COUNTER, 'CHECKOUT', false]]) {
@@ -1649,6 +1659,19 @@ function draw() {
     ctx.fillRect(landlord.x - 9, landlord.y - 57, 18, 11);                                   // fedora crown
     ctx.fillStyle = '#f3e9d2'; ctx.fillRect(landlord.x + 17, landlord.y - 8, 10, 13);       // the deed
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(landlord.x + 19, landlord.y - 4, 6, 1.4); ctx.fillRect(landlord.x + 19, landlord.y - 1, 6, 1.4);
+  }
+  // the overnight visitor, standing on the carpet while his dialog is up (Roy)
+  if (visitor) {
+    drawCustomer(visitor);
+    if (visitor.who === 'man') {
+      ctx.fillStyle = '#211d26'; ctx.fillRect(visitor.x - 15, visitor.y - 46, 30, 5);      // fedora brim
+      ctx.fillRect(visitor.x - 9, visitor.y - 57, 18, 11);                                   // fedora crown
+      ctx.fillStyle = '#f3e9d2'; ctx.fillRect(visitor.x - 27, visitor.y - 8, 10, 13);         // the deed
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(visitor.x - 25, visitor.y - 4, 6, 1.4); ctx.fillRect(visitor.x - 25, visitor.y - 1, 6, 1.4);
+    } else {
+      ctx.fillStyle = '#191919'; ctx.fillRect(visitor.x - 10, visitor.y - 38, 20, 5);         // sunglasses
+      ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(visitor.x, visitor.y - 14, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); ctx.lineWidth = 1;   // gold chain
+    }
   }
   // player — the bookseller, until the ending's transformation turns him
   // into the Mysterious Man (fedora + dark suit) and he slips away (Roy)
