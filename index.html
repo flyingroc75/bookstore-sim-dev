@@ -358,6 +358,7 @@ function reset() {
   upgrades = freshUpgrades();
   casePlan = keptCasePlan && keptCasePlan.length ? keptCasePlan.slice() : ['green', 'purple'];
   for (const g of new Set(casePlan)) if (g !== 'green' && g !== 'purple') upgrades[g] = true;
+  if (keptCats) { upgrades.cat = !!keptCats.cat; upgrades.cat2 = !!keptCats.cat2 && upgrades.cat; }   // the cat stays with the shop; the supplier does NOT — restock reverts to the Mysterious Man until re-bought
   upgrades.shelves = Math.max(0, casePlan.length - new Set(casePlan).size);
   applyUpgrades();
   // Every kept shelf starts stocked with books worth 25 (flat, like the
@@ -409,8 +410,9 @@ let shards = 0;
 let unlocked = {};      // upgrade id -> true (persistent)
 let boughtEver = {};    // upgrade id -> true (persistent; gates unlock prerequisites)
 let keptCasePlan = null;   // the shop's case layout (its shelves), kept across runs (Roy, 2026-10-16)
-function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; } } catch (e) {} }
+let keptCats = null;       // the shop cat(s) are kept too — pets, not employees (Roy, 2026-10-16). Checkers ARE employees and are not kept.
+function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; } } catch (e) {} }
 loadMeta();
 
 // ---------- Customers ----------
@@ -1097,7 +1099,8 @@ $('upCards').addEventListener('click', e => {
     } else if (u.genre) { upgrades[u.id] = true; casePlan.push(u.id); }
     else upgrades[u.id] = true;
     keptCasePlan = casePlan.slice();
-    saveMeta();   // after the purchase lands, so the kept-shelves save is current
+    keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
+    saveMeta();   // after the purchase lands, so the kept-shelves/cats save is current
   }
   refreshHUD(); sfx('buy');
   renderUpgrades();
@@ -1108,6 +1111,7 @@ $('introBar').addEventListener('click', () => { if (endingStep >= 0) advanceEndi
 function drawCat(cat) {
   ctx.save(); ctx.translate(cat.x, cat.y);
   ctx.fillStyle = 'rgba(255,170,60,.07)'; ctx.beginPath(); ctx.arc(0, 0, CAT_RADIUS, 0, Math.PI * 2); ctx.fill();
+  ctx.scale(1.7, 1.7);   // bigger cat — we want to see the cuteness (Roy, 2026-10-16). Aura radius above is gameplay, unscaled.
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 8, 13, 3.6, 0, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = cat.color; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(-10, 2); ctx.quadraticCurveTo(-17, -4, -14, -11); ctx.stroke();
   ctx.fillStyle = cat.color;
