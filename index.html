@@ -260,7 +260,7 @@ let day = 1, dayStartCoins = 200;
 let reputation = 25;                 // ⭐ start ~25; −1 per declined sale / patience walkout; +1 at a 10% chance per happy customer (Roy, 2026-10-17)
 function repDown() {
   reputation = Math.max(0, reputation - 1);
-  refreshHUD();
+  refreshHUD(); sfx('bloop');   // Roy (2026-10-17): a sad bloop whenever a customer leaves unhappy (every repDown is one)
   if (reputation <= 0 && running && !over) gameOverRep();
 }
 // Roy (2026-10-17): no more daily +1 — instead each successfully served
@@ -768,6 +768,7 @@ function sfx(kind) {
   else if (kind === 'buy') { pluck(392.0, t, 0.22, 0.045); pluck(329.6, t + 0.06, 0.26, 0.04); }
   else if (kind === 'err') { pluck(196.0, t, 0.16, 0.04, 'square'); pluck(174.6, t + 0.09, 0.22, 0.035, 'square'); }
   else if (kind === 'boop') { pluck(739.99, t, 0.1, 0.035, 'sine'); pluck(1174.66, t + 0.06, 0.16, 0.035, 'sine'); }   // happy rep bump (Roy)
+  else if (kind === 'bloop') { pluck(523.25, t, 0.12, 0.035, 'sine'); pluck(392.0, t + 0.07, 0.14, 0.035, 'sine'); pluck(261.63, t + 0.14, 0.22, 0.032, 'sine'); }   // customer leaves unhappy: descending bloop (Roy)
   else if (kind === 'thunk') { pluck(131.0, t, 0.09, 0.085, 'sine'); pluck(87.0, t + 0.01, 0.13, 0.07, 'triangle'); }   // a book thunked onto the shelf (Roy)
   else if (kind === 'tadah') { pluck(523.25, t, 0.16, 0.04); pluck(659.25, t + 0.07, 0.16, 0.04); pluck(783.99, t + 0.14, 0.2, 0.045); pluck(1046.5, t + 0.21, 0.34, 0.045); }   // collectible bought: ta-dah! (Roy)
   else if (kind === 'fanfare') { pluck(523.25, t, 0.16, 0.04); pluck(659.25, t + 0.07, 0.16, 0.04); pluck(783.99, t + 0.14, 0.2, 0.045); pluck(1046.5, t + 0.21, 0.3, 0.05); pluck(1318.5, t + 0.3, 0.42, 0.04); pluck(1567.98, t + 0.38, 0.5, 0.035); }   // collection COMPLETE
