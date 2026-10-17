@@ -457,6 +457,9 @@ function sellToBuyer(b) {
 // ---------- Haggling ----------
 const $ = id => document.getElementById(id);
 function openHaggle(seller) {
+  // Roy (2026-10-16): no haggling with full arms — the deal could never
+  // complete and the panel trapped the player. Seller just keeps waiting.
+  if (carry.length >= CARRY_MAX) { flash('🧺 Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
   haggle = { seller, offer: Math.max(1, Math.floor(seller.ask * 0.6)) };
   seller.state = 'haggle';
   $('haggleTitle').textContent = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
@@ -586,6 +589,7 @@ function sfx(kind) {
   const t = Music.ctx.currentTime;
   if (kind === 'sale') { pluck(1318.5, t, 0.24, 0.02, 'triangle'); pluck(1568.0, t + 0.07, 0.3, 0.017, 'triangle'); }
   else if (kind === 'buy') { pluck(392.0, t, 0.22, 0.045); pluck(329.6, t + 0.06, 0.26, 0.04); }
+  else if (kind === 'err') { pluck(196.0, t, 0.16, 0.04, 'square'); pluck(174.6, t + 0.09, 0.22, 0.035, 'square'); }
 }
 $('musicBtn').addEventListener('click', () => {
   Music.on = !Music.on;
