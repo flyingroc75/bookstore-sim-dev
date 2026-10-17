@@ -56,6 +56,15 @@
   .storybar button { background:transparent; border:1.5px solid #c9a35a; color:#f3e9d2; border-radius:8px; padding:6px 14px; font:14px Georgia,serif; cursor:pointer; }
   .storybar button.primary { background:#c9a35a; color:#241a10; font-weight:700; }
   .storybar button:disabled { opacity:.45; cursor:default; }
+  @keyframes hudPop { 0% { transform:scale(1); } 35% { transform:scale(1.5); } 100% { transform:scale(1); } }
+  @keyframes hudShake { 0%,100% { transform:translateX(0); } 20% { transform:translateX(-3px); } 40% { transform:translateX(3px); } 60% { transform:translateX(-2px); } 80% { transform:translateX(2px); } }
+  .hudpop { display:inline-block; animation:hudPop .55s ease; color:#ffd94a !important; }
+  .hudgood { display:inline-block; animation:hudPop .55s ease; color:#7dd87d !important; }
+  .hudbad { display:inline-block; animation:hudShake .45s ease; color:#e06868 !important; }
+  @keyframes screenShake { 0%,100% { transform:translate(0,0); } 20% { transform:translate(-4px,2px); } 40% { transform:translate(4px,-2px); } 60% { transform:translate(-3px,-1px); } 80% { transform:translate(3px,1px); } }
+  .screenshake { animation:screenShake .3s ease; }
+  @keyframes awardPulse { 0% { transform:scale(1); } 40% { transform:scale(1.18); color:#ffd94a; } 100% { transform:scale(1); } }
+  .awardpop { display:inline-block; animation:awardPulse .8s ease; }
   .colsec { margin:10px 0 4px; font-size:14px; color:#e8c87a; }
   .coltiles { display:flex; flex-wrap:wrap; gap:6px; }
   .coltile { width:86px; padding:7px 4px 5px; background:#2e2115; border:1px solid #5a4326; border-radius:8px; text-align:center; }
@@ -119,10 +128,10 @@
 <h1>📚 Bookstore Sim — Prototype</h1>
 <div id="hud">
   <span><span class="coin"></span> <b id="coins">200</b></span>
-  <span>✦ <b id="shards">0</b></span>
+  <span id="shardBox">✦ <b id="shards">0</b></span>
   <span>📅 <b id="dayNum">Day 1</b></span>
   <span>⏳ <b id="clock">3:30</b></span>
-  <span><b id="repFace">😐</b> <b id="rep">25</b></span>
+  <span id="repBox"><b id="repFace">😐</b> <b id="rep">25</b></span>
   <span><button id="musicBtn" style="padding:4px 10px; font-size:13px;">🔊 Music on</button></span>
   <span><button id="colBtn" style="padding:4px 10px; font-size:13px;">📚 <b id="colCount">0/100</b></button></span>
   <span id="buildTag" style="opacity:.55; font-size:11px;"></span>
@@ -270,9 +279,10 @@ let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 let coins, shelfStock, carry, customers, dayT, spawnT, running, over;
 let day = 1, dayStartCoins = 200;
 let reputation = 25;                 // ⭐ start ~25; −1 per declined sale / patience walkout; +1 at a 10% chance per happy customer (Roy, 2026-10-17)
-function repDown() {
+function repDown(c) {
   reputation = Math.max(0, reputation - 1);
   refreshHUD(); sfx('bloop');   // Roy (2026-10-17): a sad bloop whenever a customer leaves unhappy (every repDown is one)
+  repDownFX(c);
   if (reputation <= 0 && running && !over) gameOverRep();
 }
 // Roy (2026-10-17): no more daily +1 — instead each successfully served
@@ -281,8 +291,38 @@ let floaters = [];   // little rising emoji (😊 on a rep bump)
 function happyCustomer(c) {
   if (Math.random() >= 0.10) return;
   reputation = Math.min(100, reputation + 1);
-  refreshHUD(); sfx('boop');
-  if (c) floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' });
+  refreshHUD(); sfx('boop'); hudPop('repBox', 'hudgood');
+  if (c) { floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' }); floaters.push({ x: c.x + 16, y: c.y - 62, t: 0, txt: '⭐+1', gold: true }); bursts.push(makeBurst(c.x, c.y - 30, '#7dd87d', '✚')); }
+}
+// ---------- Drama pass (Roy, 2026-10-17): shard gains and rep swings
+// should FEEL like events — flying shards, bursts, glows, HUD pops, shake.
+let shardFlights = [], bursts = [], goldGlowT = 0, redGlowT = 0;
+function makeBurst(x, y, color, glyph) {
+  const ps = [];
+  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 + rf(-0.2, 0.2); ps.push({ x, y, vx: Math.cos(a) * rf(28, 74), vy: Math.sin(a) * rf(28, 74) - 22, t: 0, color, glyph: i % 3 === 0 ? glyph : '✦' }); }
+  return { ps };
+}
+function hudPop(id, cls) {
+  const el = $(id); if (!el || !el.classList) return;
+  el.classList.remove('hudpop', 'hudgood', 'hudbad'); void el.offsetWidth; el.classList.add(cls);
+  setTimeout(() => { try { el.classList.remove(cls); } catch (e) {} }, 650);
+}
+function hudTarget() {
+  try {
+    const r = $('shardBox').getBoundingClientRect(), cr = canvas.getBoundingClientRect();
+    return { x: (r.left + r.width / 2 - cr.left) * (W / cr.width), y: (r.top + r.height / 2 - cr.top) * (H / cr.height) };
+  } catch (e) { return { x: 150, y: -14 }; }
+}
+function celebrateShards(n, x, y) {
+  const tgt = hudTarget();
+  for (let i = 0; i < n; i++) shardFlights.push({ x0: x, y0: y, x1: tgt.x, y1: tgt.y, t: -i * 0.12 });
+  bursts.push(makeBurst(x, y, '#ffd94a', '✦'));
+  goldGlowT = 0.55; sfx('shard');
+}
+function repDownFX(c) {
+  redGlowT = 0.5; hudPop('repBox', 'hudbad');
+  const w = $('wrap'); if (w && w.classList) { w.classList.remove('screenshake'); void w.offsetWidth; w.classList.add('screenshake'); setTimeout(() => { try { w.classList.remove('screenshake'); } catch (e) {} }, 350); }
+  if (c) { floaters.push({ x: c.x, y: c.y - 62, t: 0, txt: '⭐−1', bad: true }); bursts.push(makeBurst(c.x, c.y - 30, '#e06868', '✚')); }
 }
 function gameOverRep() {
   over = true; running = false; haggle = null;
@@ -393,6 +433,7 @@ function openCollections(cut) {
     banner = '📚 New for your collection: “' + cut.title + '” (' + (c ? c.name : '') + ')' + (cut.award ? ' — 🎉 COLLECTION COMPLETE! +' + cut.award + ' ✦' : '');
   }
   renderCollections(cut ? cut.title : null, banner);
+  if (cut && cut.award) { const b = $('colBanner'); if (b && b.classList) { b.classList.remove('awardpop'); void b.offsetWidth; b.classList.add('awardpop'); } }
   $('colPanel').style.display = 'block'; colOpen = true;
   if (cut) {   // Roy (2026-10-17): the album is long — glide to the book just bought
     const grid = $('colGrid');
@@ -630,7 +671,7 @@ function doInteract() {
 function sellToBuyer(b) {
   const bk = b.book; if (!bk) return;
   coins += bk.sellPrice; stats.sold++; stats.revenue += bk.sellPrice; stats.costOfSold += (bk.cost || 0);
-  if (bk.special) { shards++; stats.shards++; saveMeta(); flash('+1 ✦ Star Shard!'); }
+  if (bk.special) { shards++; stats.shards++; saveMeta(); flash('+1 ✦ Star Shard!'); celebrateShards(1, b.x, b.y - 34); }
   else flash('+' + bk.sellPrice + ' 🪙');
   b.book = null;              // sold books leave with the buyer — for good
   b.state = 'leaveHappy';
@@ -695,10 +736,10 @@ $('offerBtn').addEventListener('click', () => {
     s.ask = Math.max(s.floor + 3, Math.round((s.ask + offer) / 2));
     $('haggleAsk').textContent = s.ask;
     $('haggleMsg').textContent = offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.';
-    if (s.patience <= 0) { closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(); }
+    if (s.patience <= 0) { closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s); }
   }
 });
-$('declineBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) repDown(); if (haggle) closeHaggle('decline'); });
+$('declineBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) repDown(haggle.seller); if (haggle) closeHaggle('decline'); });
 $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) closeHaggle('dismiss'); });
 
 // After a deal: the haggle panel greys out under an overlay card revealing the
@@ -779,6 +820,7 @@ function sfx(kind) {
   if (kind === 'sale') { pluck(1318.5, t, 0.24, 0.02, 'triangle'); pluck(1568.0, t + 0.07, 0.3, 0.017, 'triangle'); }
   else if (kind === 'buy') { pluck(392.0, t, 0.22, 0.045); pluck(329.6, t + 0.06, 0.26, 0.04); }
   else if (kind === 'err') { pluck(196.0, t, 0.16, 0.04, 'square'); pluck(174.6, t + 0.09, 0.22, 0.035, 'square'); }
+  else if (kind === 'shard') { pluck(1567.98, t, 0.14, 0.035, 'sine'); pluck(2093.0, t + 0.05, 0.16, 0.035, 'sine'); pluck(2637.0, t + 0.1, 0.24, 0.04, 'sine'); }   // a Star Shard lands (Roy: make it dramatic)
   else if (kind === 'boop') { pluck(739.99, t, 0.1, 0.035, 'sine'); pluck(1174.66, t + 0.06, 0.16, 0.035, 'sine'); }   // happy rep bump (Roy)
   else if (kind === 'bloop') { pluck(523.25, t, 0.12, 0.035, 'sine'); pluck(392.0, t + 0.07, 0.14, 0.035, 'sine'); pluck(261.63, t + 0.14, 0.22, 0.032, 'sine'); }   // customer leaves unhappy: descending bloop (Roy)
   else if (kind === 'thunk') { pluck(131.0, t, 0.09, 0.085, 'sine'); pluck(87.0, t + 0.01, 0.13, 0.07, 'triangle'); }   // a book thunked onto the shelf (Roy)
@@ -894,7 +936,7 @@ function update(dt) {
         const pos = c.chairSeat ? { x: CHAIR.x, y: CHAIR.y + 30 } : shelfSpot(c.genre, shelfWaiters[c.genre]++);
         moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
         if (shelfStock[c.genre].length > 0) { c.book = shelfStock[c.genre].shift(); c.chairSeat = false; c.state = 'toSell'; }
-        else { const seated = c.chairSeat && Math.hypot(c.x - pos.x, c.y - pos.y) < 12; drainPatience(c, seated ? 0.8 : 3.2, dt); if (c.patience <= 0) { c.state = 'leaveMad'; stats.walkStock++; repDown(); } }
+        else { const seated = c.chairSeat && Math.hypot(c.x - pos.x, c.y - pos.y) < 12; drainPatience(c, seated ? 0.8 : 3.2, dt); if (c.patience <= 0) { c.state = 'leaveMad'; stats.walkStock++; repDown(c); } }
       } else if (c.state === 'toSell') {
         const idx = sq.indexOf(c);
         const pos = queuePos(SELL_COUNTER, Math.max(0, idx), true);
@@ -926,6 +968,12 @@ function update(dt) {
   $('actionBtn').textContent = st === 'buy' ? 'Haggle' : st === 'sell' ? 'Ring up' : 'Stock books';
   if (flashT > 0) flashT -= dt;
   for (const f of floaters) f.t += dt; floaters = floaters.filter(f => f.t < 1.1);
+  for (const fl of shardFlights) { fl.t += dt / 0.8; if (fl.t >= 1 && !fl.popped) { fl.popped = true; hudPop('shardBox', 'hudpop'); } }
+  shardFlights = shardFlights.filter(fl => fl.t < 1.15);
+  for (const b of bursts) for (const p of b.ps) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 130 * dt; }
+  bursts = bursts.filter(b => b.ps[0].t < 0.7);
+  if (goldGlowT > 0) goldGlowT -= dt;
+  if (redGlowT > 0) redGlowT -= dt;
 
   refreshHUD();
 }
@@ -1256,7 +1304,7 @@ $('upCards').addEventListener('click', e => {
   if (coins < u.cost) return;
   if (u.service) {
     if (marketingTonight) return;
-    coins -= u.cost; marketingTonight = true; reputation += 5;   // word gets around
+    coins -= u.cost; marketingTonight = true; reputation += 5; hudPop('repBox', 'hudgood'); sfx('boop');   // word gets around
   } else {
     coins -= u.cost; boughtEver[u.id] = true;
     if (u.id === 'shelf') {
@@ -1618,7 +1666,19 @@ function draw() {
   carry.forEach((b, i) => drawBook(player.x - 16 + i * 11, player.y - 60, b.genre, b.special, 0.7));
   // flash
   if (flashT > 0) { ctx.fillStyle = '#ffd98a'; ctx.font = 'bold 22px Georgia'; ctx.textAlign = 'center'; ctx.fillText(flashTxt.split('🪙').join('●'), W / 2, 150); }
-  for (const f of floaters) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1); ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText(f.txt, f.x, f.y - f.t * 26); ctx.restore(); }
+  for (const f of floaters) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1); ctx.font = f.gold || f.bad ? 'bold 16px Georgia' : '20px serif'; if (f.gold) ctx.fillStyle = '#ffd94a'; if (f.bad) ctx.fillStyle = '#ff9a9a'; ctx.textAlign = 'center'; ctx.fillText(f.txt, f.x, f.y - f.t * 26); ctx.restore(); }
+  for (const fl of shardFlights) {
+    if (fl.t < 0 || fl.t > 1) continue;
+    const t = fl.t, cx = (fl.x0 + fl.x1) / 2, cy = Math.min(fl.y0, fl.y1) - 130;
+    const ix = (1 - t) * (1 - t) * fl.x0 + 2 * (1 - t) * t * cx + t * t * fl.x1;
+    const iy = (1 - t) * (1 - t) * fl.y0 + 2 * (1 - t) * t * cy + t * t * fl.y1;
+    ctx.save(); ctx.textAlign = 'center';
+    for (let k = 3; k >= 0; k--) { const tt = Math.max(0, t - k * 0.045); const jx = (1 - tt) * (1 - tt) * fl.x0 + 2 * (1 - tt) * tt * cx + tt * tt * fl.x1; const jy = (1 - tt) * (1 - tt) * fl.y0 + 2 * (1 - tt) * tt * cy + tt * tt * fl.y1; ctx.globalAlpha = 0.25 + 0.75 * (1 - k / 4); ctx.fillStyle = '#ffd94a'; ctx.font = 'bold ' + (15 + (3 - k)) + 'px serif'; ctx.fillText('✦', jx, jy); }
+    ctx.restore();
+  }
+  for (const b of bursts) for (const p of b.ps) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7); ctx.fillStyle = p.color; ctx.font = '13px serif'; ctx.textAlign = 'center'; ctx.fillText(p.glyph, p.x, p.y); ctx.restore(); }
+  if (goldGlowT > 0) { const a = Math.min(0.5, goldGlowT); ctx.save(); ctx.fillStyle = 'rgba(255,217,74,' + (a * 0.07) + ')'; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = 'rgba(255,217,74,' + (a * 0.85) + ')'; ctx.lineWidth = 5; ctx.strokeRect(2.5, 2.5, W - 5, H - 5); ctx.restore(); }
+  if (redGlowT > 0) { const a = Math.min(0.5, redGlowT); ctx.save(); ctx.fillStyle = 'rgba(224,104,104,' + (a * 0.08) + ')'; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = 'rgba(224,104,104,' + (a * 0.9) + ')'; ctx.lineWidth = 5; ctx.strokeRect(2.5, 2.5, W - 5, H - 5); ctx.restore(); }
   // opening-sequence coin drain: a stream of coins flying to the landlord…
   for (const p of coinParticles) {
     ctx.fillStyle = '#d4af37'; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); ctx.fill();
