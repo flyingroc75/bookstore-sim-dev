@@ -38,6 +38,12 @@
   #upPopClose { position:absolute; top:6px; right:10px; background:none; border:none; color:#cbbd97; font-size:19px; cursor:pointer; padding:2px 6px; }
   #upgradesPanel { max-height:96%; overflow-y:auto; padding:14px 18px; }
   #upgradesPanel h2 { margin:0 0 2px; font-size:23px; }
+  /* Sticky market header (Roy, 2026-10-16): title + next-day button share a
+     row and stay pinned to the top of the panel while the cards scroll. */
+  .uphead { position:sticky; top:-14px; z-index:4; background:#241a10; margin:-14px -18px 6px; padding:14px 18px 8px; border-bottom:1px solid #8a6d3f; }
+  .uphead .titlerow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .uphead h2 { margin:0; }
+  #nextDayBtn { white-space:nowrap; }
   .panel h2 { color:#e8c87a; font-size:18px; margin-bottom:10px; }
   .panel p { margin:5px 0; font-size:15px; }
   .panel .row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center; }
@@ -113,11 +119,12 @@
   <div id="closeOverlay"><div class="big" id="closeTitle">🌙 Day 1 complete</div><div class="sub">You lock up, sweep the floor, and count the till…</div></div>
 
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
-    <h2>🌙 Night Market</h2>
-    <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · <b id="upShards">0</b> ✦ · Unlocks are permanent; purchases apply from tomorrow. Sell ✦ special books to earn Star Shards.</p>
+    <div class="uphead">
+      <div class="titlerow"><h2>🌙 Night Market</h2><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
+      <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · <b id="upShards">0</b> ✦ · Unlocks are permanent; purchases apply from tomorrow. Sell ✦ special books to earn Star Shards.</p>
+    </div>
     <div class="upcards" id="upCards"></div>
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
-    <div class="row"><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
   </div>
 
   <div class="panel" id="rentPanel" style="display:none;">
