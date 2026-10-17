@@ -44,6 +44,18 @@
   #upgradesPanel { max-height:96%; overflow:hidden; padding:14px 18px; flex-direction:column; }
   #upgradesPanel h2 { margin:0 0 2px; font-size:23px; }
   #upScroll { overflow-y:auto; min-height:0; }
+  /* Overnight dialogs wear the story-bar look of the intro/ending dialog
+     (Roy, 2026-10-17): bottom-anchored dark bar, gold trim, name in gold
+     caps, line in italic serif, choices as gold pills. */
+  .panel.storybar { left:50%; top:auto; bottom:12px; transform:translateX(-50%); width:min(560px,92%); min-width:0;
+    background:rgba(30,21,13,.97); border:1.5px solid #c9a35a; border-radius:12px; padding:12px 18px 10px;
+    text-align:left; box-shadow:0 6px 22px rgba(0,0,0,.5); z-index:6; }
+  .storybar h2 { font:700 11px Georgia,serif; letter-spacing:.14em; color:#c9a35a; margin:0 0 4px; text-transform:uppercase; }
+  .storybar p { font:italic 15.5px Georgia,serif; color:#f3e9d2; line-height:1.5; margin:2px 0; }
+  .storybar .row { justify-content:flex-end; margin-top:9px; gap:8px; }
+  .storybar button { background:transparent; border:1.5px solid #c9a35a; color:#f3e9d2; border-radius:8px; padding:6px 14px; font:14px Georgia,serif; cursor:pointer; }
+  .storybar button.primary { background:#c9a35a; color:#241a10; font-weight:700; }
+  .storybar button:disabled { opacity:.45; cursor:default; }
   .colsec { margin:10px 0 4px; font-size:14px; color:#e8c87a; }
   .coltiles { display:flex; flex-wrap:wrap; gap:6px; }
   .coltile { width:86px; padding:7px 4px 5px; background:#2e2115; border:1px solid #5a4326; border-radius:8px; text-align:center; }
@@ -135,7 +147,7 @@
     <div id="haggleReveal"></div>
   </div>
 
-  <div class="panel" id="restockPanel" style="display:none;">
+  <div class="panel storybar" id="restockPanel" style="display:none;">
     <h2>🚪 A knock at the door…</h2>
     <p id="restockBody"></p>
     <div class="row"><button class="primary" id="restockYes">Deal</button><button id="restockNo">No thanks</button></div>
@@ -152,25 +164,25 @@
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
   </div>
 
-  <div class="panel" id="rentPanel" style="display:none;">
+  <div class="panel storybar" id="rentPanel" style="display:none;">
     <h2>🚪 A knock at the door…</h2>
     <p id="rentBody"></p>
     <div class="row"><button class="primary" id="rentPay">Pay the rent</button><button id="rentFace" style="display:none;">Face the music…</button></div>
   </div>
 
-  <div class="panel" id="winPanel" style="display:none;">
+  <div class="panel storybar" id="winPanel" style="display:none;">
     <h2 id="winTitle">🎉 Survived week!</h2>
     <p>Rent paid in cash. The Mysterious Man tips his hat and vanishes into the night — the shop is yours for another week.</p>
     <div class="row"><button class="primary" id="winOk">Keep going ▸</button></div>
   </div>
 
-  <div class="panel" id="bankruptPanel" style="display:none;">
+  <div class="panel storybar" id="bankruptPanel" style="display:none;">
     <h2 id="bankruptTitle">💸 Bankrupt!</h2>
     <p id="bankruptBody">You can't make the rent. The deed goes back to the Mysterious Man… unless. Unless <i>you</i> can find a buyer first.</p>
     <div class="row"><button class="primary" id="bankruptOk">One last idea… ▸</button></div>
   </div>
 
-  <div class="panel" id="endPanel" style="display:none;">
+  <div class="panel storybar" id="endPanel" style="display:none;">
     <h2>🔄 The cycle continues</h2>
     <p>Somewhere, a well-meaning soul is about to have a very educational week.</p>
     <div class="row"><button class="primary" id="startOverBtn">Start over</button></div>
@@ -1040,6 +1052,9 @@ function proceedAfterRestock() {
 
 // ---------- Week's end: rent, and what happens if you can't pay ----------
 let confetti = [], endingStep = -1, endBuyer = null, playerLeaving = false;
+// Roy (2026-10-17): the ending gets a little transformation animation —
+// the Buyer becomes the bookseller, and YOU become the Mysterious Man.
+let transformT = -1, transformSwapped = false, playerAsMan = false, buyerAsBookseller = false;
 let coinFrom = null, coinTo = null, coinLabel = 'Y O U R   C O I N S';
 const ENDING_LINES = [
   { who: 'YOU', line: 'Psst. Wanna buy a bookstore?' },
@@ -1078,7 +1093,7 @@ function showBankrupt(kind) {
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
 $('startOverBtn').addEventListener('click', () => {
   $('endPanel').style.display = 'none';
-  coinFrom = null; coinTo = null; coinLabel = 'Y O U R   C O I N S'; playerLeaving = false;
+  coinFrom = null; coinTo = null; coinLabel = 'Y O U R   C O I N S'; playerLeaving = false; transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
   reset(); running = true; musicStart();
 });
 function spawnConfetti() {
@@ -1087,6 +1102,7 @@ function spawnConfetti() {
 }
 function startEnding() {
   endingStep = 0; playerLeaving = false;
+  transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
   endBuyer = { id: 998, x: 446, y: 356, state: 'haggle', kind: 'buyer', genre: 'green',
                look: { skin: '#e8b48c', hair: '#6b4a2f', hairStyle: 0, coat: '#b0503c' } };
   player.x = 532; player.y = 356; player.target = null;
@@ -1100,9 +1116,10 @@ function showEndingLine() {
 }
 function advanceEnding() {
   if (endingStep < 0) return;
+  if (transformT >= 0) return;   // mid-transformation — let it play
   if (endingStep === 2 && coinAnim) { coinAnim = null; introCoins = 200; startCoinHold(); return; }
   if (endingStep === 1) { coinAnim = { t: 0 }; introCoins = 9999; }
-  if (endingStep === 2) playerLeaving = true;
+  if (endingStep === 2 && !transformSwapped) { transformT = 0; return; }   // "Deal." — the transformation beat
   endingStep++;
   if (endingStep >= ENDING_LINES.length) {
     endingStep = -1; endBuyer = null; coinFrom = null; coinTo = null;
@@ -1113,6 +1130,11 @@ function advanceEnding() {
   showEndingLine();
 }
 function updateEnding(dt) {
+  if (transformT >= 0) {
+    transformT += dt;
+    if (transformT >= 0.55 && !transformSwapped) { transformSwapped = true; playerAsMan = true; buyerAsBookseller = true; sfx('tadah'); }
+    if (transformT >= 1.25) { transformT = -1; playerLeaving = true; endingStep = 3; showEndingLine(); }
+  }
   if (playerLeaving) { if (moveToward(player, DOOR.x, DOOR.y + 24, 175 * SPEED_MULT, dt)) playerLeaving = false; }
   confetti = confetti.filter(p => { p.life -= dt; p.vy = Math.min(150, p.vy + 60 * dt); p.y += p.vy * dt; p.x += p.vx * dt + Math.sin(p.y * 0.04 + p.seed) * 0.7; p.rot += p.vr * dt; return p.life > 0 && p.y < H + 24; });
 }
@@ -1330,6 +1352,38 @@ function drawCustomer(c) {
   }
   ctx.restore();
 }
+// Ending transformation helpers (Roy, 2026-10-17)
+function drawFigure(c) {
+  if (transformT < 0) { drawCustomer(c); return; }
+  const sc = 1 + 0.09 * Math.sin(transformT * 16) * Math.max(0, 1 - transformT / 1.2);
+  ctx.save(); ctx.translate(c.x, c.y); ctx.scale(sc, 1 / sc); ctx.translate(-c.x, -c.y);
+  drawCustomer(c); ctx.restore();
+}
+function drawApronOn(c) {
+  // a cream bookseller's apron over the (former) buyer's coat
+  ctx.fillStyle = '#f3e9d2'; ctx.fillRect(c.x - 8, c.y - 15, 16, 25);
+  ctx.strokeStyle = '#b09a6a'; ctx.lineWidth = 1.2; ctx.strokeRect(c.x - 8, c.y - 15, 16, 25);
+  ctx.beginPath(); ctx.moveTo(c.x - 8, c.y - 15); ctx.lineTo(c.x, c.y - 21); ctx.lineTo(c.x + 8, c.y - 15); ctx.stroke();
+  ctx.fillStyle = '#c4503c'; ctx.fillRect(c.x + 2, c.y - 11, 4.5, 3.4);   // name tag
+  ctx.strokeStyle = 'rgba(90,67,38,.6)'; ctx.beginPath(); ctx.moveTo(c.x - 5, c.y + 3); ctx.lineTo(c.x + 5, c.y + 3); ctx.stroke();
+  ctx.lineWidth = 1;
+}
+function drawTransformSparkles() {
+  ctx.save(); ctx.textAlign = 'center';
+  for (const p of [endBuyer, player]) {
+    if (!p) continue;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 2.4 + transformT * 4, r = 24 + 5 * Math.sin(transformT * 6 + i);
+      ctx.globalAlpha = Math.max(0, Math.sin(Math.PI * Math.min(1, transformT / 1.2))) * 0.95;
+      ctx.fillStyle = i % 2 ? '#ffd94a' : '#f3e9d2';
+      ctx.font = (11 + (i % 3) * 3) + 'px serif';
+      ctx.fillText('✦', p.x + Math.cos(a) * r, p.y - 22 + Math.sin(a) * r * 0.8);
+    }
+    const f = 1 - Math.abs(transformT - 0.55) / 0.18;   // gold ring flash at the swap moment
+    if (f > 0) { ctx.globalAlpha = f * 0.85; ctx.strokeStyle = '#ffd94a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y - 18, 34 - f * 14, 0, Math.PI * 2); ctx.stroke(); }
+  }
+  ctx.restore();
+}
 function drawBookseller() {
   ctx.save();
   ctx.translate(player.x, player.y);
@@ -1539,7 +1593,7 @@ function draw() {
     }
     if (c.state === 'leaveMad') { ctx.fillStyle = '#e06868'; ctx.font = '17px serif'; ctx.fillText('💢', c.x, c.y - 60); }
   }
-  if (endBuyer) drawCustomer(endBuyer);
+  if (endBuyer) { drawFigure(endBuyer); if (buyerAsBookseller) drawApronOn(endBuyer); }
   // the landlord (opening sequence only) — shady suit, fedora, deed in hand
   if (landlord) {
     drawCustomer(landlord);
@@ -1548,12 +1602,19 @@ function draw() {
     ctx.fillStyle = '#f3e9d2'; ctx.fillRect(landlord.x + 17, landlord.y - 8, 10, 13);       // the deed
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(landlord.x + 19, landlord.y - 4, 6, 1.4); ctx.fillRect(landlord.x + 19, landlord.y - 1, 6, 1.4);
   }
-  // player (the bookseller) — wearing the fedora during the ending sequence
-  drawBookseller();
-  if (endingStep >= 0) {
-    ctx.fillStyle = '#211d26'; ctx.fillRect(player.x - 15, player.y - 46, 30, 5);
-    ctx.fillRect(player.x - 9, player.y - 57, 18, 11);
-  }
+  // player — the bookseller, until the ending's transformation turns him
+  // into the Mysterious Man (fedora + dark suit) and he slips away (Roy)
+  if (playerAsMan) {
+    const manFig = { x: player.x, y: player.y, state: 'haggle', kind: 'seller', genre: 'green', look: { skin: '#d9a878', hair: '#23202a', hairStyle: 0, coat: '#2e2a33', flip: false } };
+    drawFigure(manFig);
+    ctx.fillStyle = '#211d26'; ctx.fillRect(player.x - 15, player.y - 46, 30, 5);      // fedora brim
+    ctx.fillRect(player.x - 9, player.y - 57, 18, 11);                                   // fedora crown
+  } else if (transformT >= 0) {
+    const sc = 1 + 0.09 * Math.sin(transformT * 16) * Math.max(0, 1 - transformT / 1.2);
+    ctx.save(); ctx.translate(player.x, player.y); ctx.scale(sc, 1 / sc); ctx.translate(-player.x, -player.y);
+    drawBookseller(); ctx.restore();
+  } else drawBookseller();
+  if (transformT >= 0) drawTransformSparkles();
   carry.forEach((b, i) => drawBook(player.x - 16 + i * 11, player.y - 60, b.genre, b.special, 0.7));
   // flash
   if (flashT > 0) { ctx.fillStyle = '#ffd98a'; ctx.font = 'bold 22px Georgia'; ctx.textAlign = 'center'; ctx.fillText(flashTxt.split('🪙').join('●'), W / 2, 150); }
