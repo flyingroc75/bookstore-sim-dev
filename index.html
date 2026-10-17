@@ -26,7 +26,9 @@
   .upcard.owned { border-color:#7fae5a; opacity:.85; }
   .upcard h3 { margin:8px 0 4px; font-size:16.5px; color:#f3e9d2; }
   .upcard p { margin:0 0 8px; font-size:13px; color:#cbbd97; line-height:1.32; min-height:52px; }
-  .upcard .icon { height:52px; display:flex; align-items:center; justify-content:center; }
+  .upcard .icon { height:52px; display:flex; align-items:center; justify-content:center; font-size:40px; }
+  .upcard.locked { opacity:.55; filter:grayscale(.8); }
+  .upcard .locknote { font-size:12px; color:#a08c5f; min-height:0; margin:0 0 8px; }
   #upgradesPanel { max-height:96%; overflow-y:auto; padding:14px 18px; }
   #upgradesPanel h2 { margin:0 0 2px; font-size:23px; }
   .panel h2 { color:#e8c87a; font-size:18px; margin-bottom:10px; }
@@ -66,6 +68,7 @@
 <h1>📚 Bookstore Sim — Prototype</h1>
 <div id="hud">
   <span><span class="coin"></span> <b id="coins">200</b></span>
+  <span>✦ <b id="shards">0</b></span>
   <span>📅 <b id="dayNum">Day 1</b></span>
   <span>⏳ <b id="clock">3:30</b></span>
   <span><b id="repFace">😐</b> <b id="rep">25</b></span>
@@ -101,28 +104,8 @@
 
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
     <h2>🔧 Night Market — Upgrades</h2>
-    <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · Anything you buy applies from tomorrow.</p>
-    <div class="upcards">
-      <div class="upcard" id="upCard-supplier">
-        <div class="icon"><svg width="60" height="60" viewBox="0 0 60 60"><rect x="14" y="34" width="32" height="18" rx="3" fill="#7a3b8c"/><rect x="26" y="24" width="8" height="12" fill="#e8b48c"/><circle cx="30" cy="19" r="7.5" fill="#e8b48c"/><rect x="17" y="13.5" width="26" height="3.6" rx="1.8" fill="#232028"/><rect x="23" y="5" width="14" height="9" rx="2" fill="#232028"/><rect x="21.5" y="18" width="17" height="4" rx="2" fill="#14100c"/><rect x="41" y="36" width="11" height="14" rx="2" fill="#ffd94a" transform="rotate(14 46 43)"/><text x="46.5" y="46.5" font-size="9" font-weight="bold" fill="#7a5410" text-anchor="middle" transform="rotate(14 46 43)">$</text></svg></div>
-        <h3>Sleazy Book Supplier</h3>
-        <p>Knows a guy. When your shelves run completely dry, he slinks in and sells at full retail — and he takes over the nightly restock too: 25 a book instead of the Man's 30.</p>
-        <button class="primary upbuy" data-up="supplier">20 <span class="coin"></span></button>
-      </div>
-      
-      <div class="upcard" id="upCard-marketing">
-        <div class="icon"><svg width="60" height="60" viewBox="0 0 60 60"><path d="M10 26 L34 16 L34 44 L10 34 Z" fill="#c4503c"/><rect x="6" y="25" width="5" height="10" rx="2" fill="#8c3527"/><path d="M16 35 L20 35 L22 47 L16 47 Z" fill="#6e4630"/><path d="M40 20 a14 14 0 0 1 0 20" stroke="#ffd94a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M45 15 a21 21 0 0 1 0 30" stroke="#ffd94a" stroke-width="3" fill="none" stroke-linecap="round" opacity=".55"/></svg></div>
-        <h3>Marketing</h3>
-        <p>A flyer run, a sandwich board out front, chalk arrows on the sidewalk. Word gets around: <b>+5 reputation</b>. Once per night.</p>
-        <button class="primary upbuy" data-up="marketing">20 <span class="coin"></span></button>
-      </div>
-      <div class="upcard" id="upCard-bookcase">
-        <div class="icon"><svg width="60" height="60" viewBox="0 0 60 60"><rect x="12" y="6" width="36" height="48" fill="#7d5a30"/><rect x="15" y="9" width="30" height="42" fill="#43301d"/><line x1="15" y1="23" x2="45" y2="23" stroke="#96733d" stroke-width="2.6"/><line x1="15" y1="37" x2="45" y2="37" stroke="#96733d" stroke-width="2.6"/><rect x="18" y="13" width="5" height="10" fill="#4f7d4a"/><rect x="24" y="12" width="5" height="11" fill="#7a9e43"/><rect x="33" y="13" width="5" height="10" fill="#5a8c6e"/><rect x="20" y="27" width="5" height="10" fill="#8a5fa0"/><rect x="26" y="26" width="5" height="11" fill="#6a4a8c"/><rect x="36" y="27" width="5" height="10" fill="#a06ab0"/><rect x="19" y="41" width="5" height="10" fill="#4f7d4a"/><rect x="30" y="40" width="5" height="11" fill="#8a5fa0"/><rect x="37" y="41" width="5" height="10" fill="#7a9e43"/></svg></div>
-        <h3>Bookcase Upgrade</h3>
-        <p>Proper three-tier bookcases, built overnight. Each case holds <b>9 books</b> instead of 6 — room to breathe, room to stock.</p>
-        <button class="primary upbuy" data-up="bookcase">20 <span class="coin"></span></button>
-      </div>
-    </div>
+    <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · <b id="upShards">0</b> ✦ · Unlocks are permanent; purchases apply from tomorrow. Sell ✦ special books to earn Star Shards.</p>
+    <div class="upcards" id="upCards"></div>
     <div class="row"><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
   </div>
 
@@ -173,24 +156,41 @@ const DAY_LEN = 150;                 // one day = 2 minutes 30 seconds (Roy tune
 const SPEED_MULT = 1.25;             // all character movement ×1.25 (Roy, 2026-10-16)
 const PATIENCE_MULT = 0.75;          // customers keep 75% of original patience (Roy, 2026-10-16)
 const BUILD_LABEL = 'dev';           // 'dev' in the iteration repo; promotion to the stable repo seds this to 'stable'
-const GENRE_COLOR = { green: '#3fae5a', purple: '#8b4fc4' };
-const GENRE_NAME = { green: 'Non-fiction', purple: 'Fiction' };
+const GENRE_COLOR = { green: '#3fae5a', purple: '#8b4fc4', poetry: '#e08a3c', comics: '#3cc4b0' };
+const GENRE_NAME = { green: 'Non-fiction', purple: 'Fiction', poetry: 'Poetry', comics: 'Comics' };
+const ALL_GENRES = ['green', 'purple', 'poetry', 'comics'];
+const BOOK_VALUES = { green: { n: [20, 38], s: [90, 140] }, purple: { n: [30, 52], s: [120, 190] },
+                      poetry: { n: [26, 46], s: [100, 160] }, comics: { n: [24, 44], s: [95, 150] } };
+let activeGenres = ['green', 'purple'];   // genres in play today (set by applyUpgrades)
+let casePlan = ['green', 'purple'];       // genre of each case slot, in slot order (run-scoped)
 const CARRY_MAX = 4;
-let SHELF_CAP = 6;                   // max books per shelf
+let SHELF_CAP = 6;                   // books per case (legacy name; capacity is per-genre via capacityOf)
 const COIN = '<span class="coin"></span>';
 
 // ---------- Layout ----------
 const W = 960, H = 600;
 let SHELF_TIERS = 2;                 // tiers per bookcase
-let upgrades = { supplier: false, appraisal: false, bookcase: false };
+function freshUpgrades() { return { supplier: false, reliable: false, appraisal: false, bookcase: false, bookcase2: false, speed: false, speed2: false, cat: false, cat2: false, chair: false, checker: false, checker2: false, poetry: false, comics: false, shelves: 0 }; }
+let upgrades = freshUpgrades();
 let supplierUsedToday = false, marketingTonight = false;
 // Floor plan per Roy's sketch (2026-10-16): bookcases in the two TOP CORNERS,
 // counters along the bottom, door at the bottom-left. Room for SIX more
 // bookshelves after these two: two more on the back wall, four as islands.
-const SHELF = {
-  green:  { x: 36,  y: 40, w: 108, h: 116 },
-  purple: { x: 816, y: 40, w: 108, h: 116 }
-};
+// Cases are dynamic now: casePlan assigns a genre to each slot in order
+// (Extra Shelf purchases and new genres append slots during a run).
+const SLOT_POS = [ { x: 36, y: 40 }, { x: 816, y: 40 },
+  { x: 176, y: 40 }, { x: 316, y: 40 }, { x: 456, y: 40 }, { x: 596, y: 40 },
+  { x: 316, y: 246 }, { x: 596, y: 246 } ];
+let cases = [];                          // built by buildCases(): {genre,x,y,w,h}
+function caseHeight() { return (upgrades.bookcase || upgrades.bookcase2) ? 174 : 116; }
+function buildCases() {
+  cases = casePlan.map((g, i) => ({ genre: g, x: SLOT_POS[i].x, y: SLOT_POS[i].y, w: 108, h: caseHeight() }));
+  OBSTACLES.length = 0; OBSTACLES.push(...cases, BUY_COUNTER, SELL_COUNTER);
+}
+function casesOf(g) { return cases.filter(c => c.genre === g); }
+function firstCase(g) { return casesOf(g)[0] || { x: 36, y: 40, w: 108, h: caseHeight() }; }
+function caseCap() { return upgrades.bookcase2 ? 12 : upgrades.bookcase ? 9 : 6; }
+function capacityOf(g) { return casesOf(g).length * caseCap(); }
 // Space kept free for six more (skinny) bookshelves — layout data only,
 // deliberately NOT drawn (Roy: no gray outlines).
 const RESERVED_SLOTS = [
@@ -201,7 +201,7 @@ const RESERVED_SLOTS = [
 const BUY_COUNTER  = { x: 90,  y: 452, w: 300, h: 52 };
 const SELL_COUNTER = { x: 570, y: 452, w: 300, h: 52 };
 const DOOR = { x: 84, y: 588 };
-const OBSTACLES = [ SHELF.green, SHELF.purple, BUY_COUNTER, SELL_COUNTER ];
+let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 
 // ---------- State ----------
 let coins, shelfStock, carry, customers, dayT, spawnT, running, over;
@@ -217,7 +217,7 @@ function gameOverRep() {
   $('hagglePanel').style.display = 'none';   // close whatever was mid-flight; refreshHUD() settles the HUD
   showBankrupt('rep');
 }
-function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, restockBy: '' }; }
+function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, restockBy: '', shards: 0 }; }
 let stats, haggle; // haggle = { seller, offer }
 let startNetWorth = 0;
 let player;
@@ -225,9 +225,8 @@ let player;
 function makeBook(genre, special) {
   // 'value' is the book's true sell price — fixed per book, but HIDDEN from the
   // player, who only ever sees an appraisal range around it.
-  let value;
-  if (special) value = genre === 'green' ? rnd(90, 140) : rnd(120, 190);
-  else         value = genre === 'green' ? rnd(20, 38)  : rnd(30, 52);
+  const bv = BOOK_VALUES[genre] || BOOK_VALUES.green;
+  const value = special ? rnd(bv.s[0], bv.s[1]) : rnd(bv.n[0], bv.n[1]);
   return { genre, special: !!special, value, sellPrice: value, cost: 0 };   // cost = what we paid (0 for opening stock)
 }
 function appraisalRange(book) {
@@ -330,19 +329,52 @@ function reset() {
   dayT = 0; spawnT = 1.2; running = false; over = false; haggle = null;
   stats = freshStats();
   day = 1; dayStartCoins = coins; reputation = 25;
-  startNetWorth = coins + shelfStock.green.concat(shelfStock.purple).reduce((a, b) => a + (b.cost || 0), 0);
+  startNetWorth = coins + Object.values(shelfStock).flat().reduce((a, b) => a + (b.cost || 0), 0);
   player = { x: 480, y: 385, speed: 235 * SPEED_MULT, target: null };
   document.getElementById('tallyPanel').style.display = 'none';
   document.getElementById('hagglePanel').style.display = 'none';
-  upgrades = { supplier: false, appraisal: false, bookcase: false }; applyUpgrades();
+  upgrades = freshUpgrades(); casePlan = ['green', 'purple']; applyUpgrades();
   if (!storySeen) startIntro();
 }
+
+// ---------- Cats, checker, chair (upgrade effects) ----------
+let cats = [];
+let checkerT = 0;
+const CHAIR = { x: 480, y: 252 };
+const CAT_RADIUS = 120;
+function newCat(color) { return { x: rf(200, 760), y: rf(240, 420), tx: 480, ty: 330, nap: rf(0, 2), color }; }
+function resetCats() { cats = []; if (upgrades.cat) cats.push(newCat('#e8a34c')); if (upgrades.cat2) cats.push(newCat('#9aa0a8')); }
+function updateCats(dt) {
+  for (const cat of cats) {
+    if (cat.nap > 0) { cat.nap -= dt; continue; }
+    if (moveToward(cat, cat.tx, cat.ty, 55, dt)) { cat.nap = rf(1.5, 4.5); cat.tx = rf(70, 890); cat.ty = rf(190, 435); }
+  }
+}
+function inCatAura(c) { return cats.some(cat => Math.hypot(c.x - cat.x, c.y - cat.y) < CAT_RADIUS); }
+function drainPatience(c, rate, dt) {
+  if (cats.length && inCatAura(c)) { c.patience = Math.min(c.maxPatience || 100, c.patience + 6 * dt); return; }
+  c.patience -= rate * dt;
+}
+function runChecker(dt) {
+  if (!upgrades.checker || !running || over) return;
+  checkerT -= dt;
+  if (checkerT <= 0) { checkerT = upgrades.checker2 ? 2 : 4; const b = frontBuyer(); if (b && b.book) sellToBuyer(b); }
+}
+
+// ---------- Meta progression (persists across runs) ----------
+const SAVE_KEY = 'bookstoreSim.v1';
+let shards = 0;
+let unlocked = {};      // upgrade id -> true (persistent)
+let boughtEver = {};    // upgrade id -> true (persistent; gates unlock prerequisites)
+function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; } } catch (e) {} }
+loadMeta();
 
 // ---------- Customers ----------
 let cid = 0;
 function spawnCustomer() {
   const isBuyer = Math.random() < 0.6;   // sellers = 40% of arrivals (was 33%, +20%)
-  const genre = Math.random() < 0.5 ? 'green' : 'purple';
+  const genre = activeGenres[Math.floor(Math.random() * activeGenres.length)];
   const c = { id: cid++, x: DOOR.x + rf(-14, 14), y: DOOR.y, genre,
               patience: 100 * PATIENCE_MULT, state: 'enter', book: null, queueIdx: 0 };
   // --- sprite look (random per customer) ---
@@ -357,6 +389,7 @@ function spawnCustomer() {
     coat: (isBuyer ? COATS_B : COATS_S)[rnd(0, 4)],
     flip: Math.random() < 0.5
   };
+  c.maxPatience = c.patience;
   if (isBuyer) { c.kind = 'buyer'; }
   else {
     c.kind = 'seller';
@@ -372,7 +405,7 @@ function queuePos(counter, idx, fromTop) {
   return { x: counter.x + 40 + idx * 70, y: counter.y - 40 };
 }
 function shelfSpot(genre, idx) {
-  const s = SHELF[genre];
+  const s = firstCase(genre);
   return { x: s.x + 30 + (idx % 6) * 54, y: s.y + s.h + 34 };
 }
 
@@ -381,9 +414,8 @@ function nearStation() {
   const p = player;
   if (Math.abs(p.y - (BUY_COUNTER.y - 20)) < 66 && p.x > BUY_COUNTER.x - 30 && p.x < BUY_COUNTER.x + BUY_COUNTER.w + 30) return 'buy';
   if (Math.abs(p.y - (SELL_COUNTER.y - 20)) < 66 && p.x > SELL_COUNTER.x - 30 && p.x < SELL_COUNTER.x + SELL_COUNTER.w + 30) return 'sell';
-  for (const g of ['green', 'purple']) {
-    const s = SHELF[g];
-    if (p.y > s.y && p.y < s.y + s.h + 74 && p.x > s.x - 24 && p.x < s.x + s.w + 24) return 'shelf-' + g;
+  for (const cs of cases) {
+    if (p.y > cs.y && p.y < cs.y + cs.h + 74 && p.x > cs.x - 24 && p.x < cs.x + cs.w + 24) return 'shelf-' + cs.genre;
   }
   return null;
 }
@@ -400,21 +432,26 @@ function doInteract() {
     if (s) openHaggle(s);
   } else if (st === 'sell') {
     const b = frontBuyer();
-    if (b && b.book) {
-      coins += b.book.sellPrice; stats.sold++; stats.revenue += b.book.sellPrice; stats.costOfSold += (b.book.cost || 0);
-      flash('+' + b.book.sellPrice + ' 🪙');
-      b.book = null;              // sold books leave with the buyer — for good
-      b.state = 'leaveHappy';
-      sfx('sale');
-    }
+    if (b && b.book) sellToBuyer(b);
   } else if (st && st.startsWith('shelf-')) {
     const g = st.slice(6);
     const before = carry.length;
     let moved = 0;
-    carry = carry.filter(bk => { if (bk.genre === g && shelfStock[g].length < SHELF_CAP) { shelfStock[g].push(bk); moved++; return false; } return true; });
+    carry = carry.filter(bk => { if (bk.genre === g && shelfStock[g].length < capacityOf(g)) { shelfStock[g].push(bk); moved++; return false; } return true; });
     if (moved) flash('Stocked ' + GENRE_NAME[g]);
     else if (before) flash(GENRE_NAME[g] + ' shelf is full!');
   }
+}
+
+function sellToBuyer(b) {
+  const bk = b.book; if (!bk) return;
+  coins += bk.sellPrice; stats.sold++; stats.revenue += bk.sellPrice; stats.costOfSold += (bk.cost || 0);
+  if (bk.special) { shards++; stats.shards++; saveMeta(); flash('+1 ✦ Star Shard!'); }
+  else flash('+' + bk.sellPrice + ' 🪙');
+  b.book = null;              // sold books leave with the buyer — for good
+  b.state = 'leaveHappy';
+  sfx('sale');
+  refreshHUD();
 }
 
 // ---------- Haggling ----------
@@ -606,14 +643,16 @@ function collide(p) {
 // floor = ask = the book's sell price. Desperation stock, zero margin.
 function spawnSupplier() {
   supplierUsedToday = true;
-  const genre = Math.random() < 0.5 ? 'green' : 'purple';
+  const genre = activeGenres[Math.floor(Math.random() * activeGenres.length)];
   const c = { id: cid++, x: DOOR.x + rf(-14, 14), y: DOOR.y, genre,
               patience: 100 * PATIENCE_MULT, state: 'enter', book: null, queueIdx: 0, sleazy: true };
   c.look = { skin: '#e0ac69', hair: '#1c1c22', hairStyle: 1, coat: '#7a3b8c', flip: false };
   c.kind = 'seller';
+  c.maxPatience = c.patience;
   c.book = makeBook(genre, false);
   c.floor = c.book.value;
   c.ask = c.book.value;
+  if (upgrades.reliable) { c.book.value = 25; c.book.sellPrice = 25; c.floor = 23; c.ask = 23; }   // Reliable Supplier: 23 in, 25 out
   customers.push(c);
   flash('🕶️ A sleazy supplier slinks in…');
 }
@@ -623,7 +662,7 @@ function update(dt) {
   dayT += dt;
   if (dayT >= DAY_LEN) { endDay(); return; }
   spawnT -= dt;
-  if (upgrades.supplier && !supplierUsedToday && shelfStock.green.length + shelfStock.purple.length === 0) spawnSupplier();
+  if (upgrades.supplier && !supplierUsedToday && activeGenres.every(g => shelfStock[g].length === 0)) spawnSupplier();
   if (spawnT <= 0) { spawnCustomer(); spawnT = Math.max(4.5, 8.5 - dayT * 0.012) * (25 / Math.max(reputation, 8)) * rf(0.8, 1.2) * (DAY_LEN / 210); }   // rep slowdown floored at ~3x; density scales with day length so a shorter day admits the same arrivals (Roy, 2026-10-16)
 
   // player movement
@@ -638,7 +677,7 @@ function update(dt) {
 
   // customers
   const bq = buyQueue(), sq = sellQueue();
-  let shelfWaiters = { green: 0, purple: 0 };
+  const shelfWaiters = {}; for (const g of activeGenres) shelfWaiters[g] = 0;
   for (const c of customers) {
     if (c.state === 'leaveHappy' || c.state === 'leaveMad') { moveToward(c, DOOR.x, DOOR.y + 26, 150 * SPEED_MULT, dt); continue; }
     if (c.kind === 'seller') {
@@ -647,7 +686,7 @@ function update(dt) {
         const idx = bq.indexOf(c);
         const pos = queuePos(BUY_COUNTER, Math.max(0, idx), true);
         if (c.state === 'toBuy') moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
-        if (!(haggle && haggle.dealt && haggle.seller === c)) c.patience -= dt * (c.state === 'haggle' ? 2.0 : 1.5);
+        if (!(haggle && haggle.dealt && haggle.seller === c)) drainPatience(c, c.state === 'haggle' ? 2.0 : 1.5, dt);
         if (c.patience <= 0) {
           if (haggle && haggle.seller === c) closeHaggle('storm');
           c.state = 'leaveMad'; stats.walkWait++; repDown();
@@ -663,15 +702,16 @@ function update(dt) {
           else c.state = 'waitShelf';
         }
       } else if (c.state === 'waitShelf') {
-        const pos = shelfSpot(c.genre, shelfWaiters[c.genre]++);
+        if (upgrades.chair && !c.chairSeat && !customers.some(o => o !== c && o.chairSeat)) c.chairSeat = true;   // claim the Comfy Chair
+        const pos = c.chairSeat ? { x: CHAIR.x, y: CHAIR.y + 30 } : shelfSpot(c.genre, shelfWaiters[c.genre]++);
         moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
-        if (shelfStock[c.genre].length > 0) { c.book = shelfStock[c.genre].shift(); c.state = 'toSell'; }
-        else { c.patience -= dt * 3.2; if (c.patience <= 0) { c.state = 'leaveMad'; stats.walkStock++; repDown(); } }
+        if (shelfStock[c.genre].length > 0) { c.book = shelfStock[c.genre].shift(); c.chairSeat = false; c.state = 'toSell'; }
+        else { const seated = c.chairSeat && Math.hypot(c.x - pos.x, c.y - pos.y) < 12; drainPatience(c, seated ? 0.8 : 3.2, dt); if (c.patience <= 0) { c.state = 'leaveMad'; stats.walkStock++; repDown(); } }
       } else if (c.state === 'toSell') {
         const idx = sq.indexOf(c);
         const pos = queuePos(SELL_COUNTER, Math.max(0, idx), true);
         moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
-        c.patience -= dt * 1.5;
+        drainPatience(c, 1.5, dt);
         if (c.patience <= 0) { // leaves, book goes back on the shelf
           shelfStock[c.genre].push(c.book); c.book = null; c.state = 'leaveMad'; stats.walkWait++; repDown();
         }
@@ -679,6 +719,9 @@ function update(dt) {
     }
   }
   customers = customers.filter(c => !(c.y > H + 16 && (c.state === 'leaveHappy' || c.state === 'leaveMad')));
+
+  updateCats(dt);
+  runChecker(dt);
 
   // hint + action button
   const st = nearStation();
@@ -688,7 +731,7 @@ function update(dt) {
   else if (st && st.startsWith('shelf-')) {
     const g = st.slice(6);
     canAct = carry.some(b => b.genre === g);
-    hint = canAct ? 'Stock your ' + GENRE_NAME[g] + ' books' : GENRE_NAME[g] + ' shelf (' + shelfStock[g].length + '/' + SHELF_CAP + ')';
+    hint = canAct ? 'Stock your ' + GENRE_NAME[g] + ' books' : GENRE_NAME[g] + ' shelf (' + shelfStock[g].length + '/' + capacityOf(g) + ')';
   }
   $('hint').innerHTML = hint.split('🪙').join(COIN);
   $('actionBtn').style.display = canAct ? 'block' : 'none';
@@ -701,6 +744,7 @@ function update(dt) {
 function refreshHUD() {
   $('dayNum').textContent = 'Day ' + day;
   $('coins').textContent = (introStep >= 0 && !storySeen) ? Math.round(introCoins).toLocaleString('en-US') : coins;
+  $('shards').textContent = shards;
   const remain = Math.max(0, DAY_LEN - dayT), mm = Math.floor(remain / 60), ss = Math.floor(remain % 60);
   $('clock').textContent = mm + ':' + String(ss).padStart(2, '0');
   $('rep').textContent = reputation;
@@ -711,9 +755,14 @@ function refreshHUD() {
 // shop owns goes back on a shelf — books in your arms and books buyers are
 // still holding. Shelf first, then your arms; whatever fits nowhere is wasted.
 function applyUpgrades() {
-  SHELF_CAP = upgrades.bookcase ? 9 : 6;
-  SHELF_TIERS = upgrades.bookcase ? 3 : 2;
-  for (const g of ['green', 'purple']) SHELF[g].h = upgrades.bookcase ? 174 : 116;
+  SHELF_CAP = caseCap();
+  SHELF_TIERS = (upgrades.bookcase || upgrades.bookcase2) ? 3 : 2;
+  activeGenres = ALL_GENRES.filter(g => g === 'green' || g === 'purple' || upgrades[g]);
+  if (shelfStock) for (const g of activeGenres) if (!shelfStock[g]) shelfStock[g] = [];
+  buildCases();
+  if (player) player.speed = 235 * SPEED_MULT * (upgrades.speed2 ? 1.4 : upgrades.speed ? 1.2 : 1);
+  resetCats();
+  checkerT = 0;
   supplierUsedToday = false;
   marketingTonight = false;
 }
@@ -724,7 +773,7 @@ function startNextDay() {
   customers = []; dayT = 0; spawnT = 1.2; over = false; haggle = null;
   stats = freshStats();
   dayStartCoins = coins;
-  startNetWorth = coins + shelfStock.green.concat(shelfStock.purple, carry).reduce((a, b) => a + (b.cost || 0), 0);
+  startNetWorth = coins + Object.values(shelfStock).flat().concat(carry).reduce((a, b) => a + (b.cost || 0), 0);
   player.x = 480; player.y = 385; player.target = null;
   $('tallyPanel').style.display = 'none';
   $('upgradesPanel').style.display = 'none';
@@ -760,25 +809,25 @@ function endDay() {
   for (const c of customers) if (c.kind === 'buyer' && c.book && (c.state === 'toSell' || c.state === 'queueSell')) pool.push(c.book);
   carry = []; customers = [];
   for (const b of pool) {
-    if (shelfStock[b.genre].length < SHELF_CAP) shelfStock[b.genre].push(b);
+    if (shelfStock[b.genre].length < capacityOf(b.genre)) shelfStock[b.genre].push(b);
     else if (carry.length < CARRY_MAX) carry.push(b);
     else { stats.wasted++; stats.wastedValue += b.sellPrice; }
   }
   // The Mysterious Man's restock offer: if even ONE slot is empty at close,
   // he offers to fill every empty slot at 30 a book — books that sell for 25.
   // He appears BEFORE the tally so the numbers include the deal.
-  const shelfTotal = shelfStock.green.length + shelfStock.purple.length;
-  const emptySlots = (SHELF_CAP * 2) - shelfTotal;
+  const shelfTotal = activeGenres.reduce((a, g) => a + shelfStock[g].length, 0);
+  const emptySlots = activeGenres.reduce((a, g) => a + capacityOf(g), 0) - shelfTotal;
   if (emptySlots > 0) {   // the offer ALWAYS comes if even one slot is empty (Roy)
     // Owning the Sleazy Supplier SWAPS your supplier: his nightly restock is
     // at retail (25/book) instead of the Mysterious Man's 30/book trap.
-    const bySupplier = upgrades.supplier;
-    const perBook = bySupplier ? 25 : 30;
+    const bySupplier = upgrades.supplier || upgrades.reliable;
+    const perBook = upgrades.reliable ? 23 : bySupplier ? 25 : 30;   // Reliable Supplier restocks at 23
     pendingRestock = { empty: emptySlots, total: emptySlots * perBook, perBook, bySupplier };
     stats.restockBy = bySupplier ? 'supplier' : 'man';
     const spaces = emptySlots + ' empty space' + (emptySlots === 1 ? '' : 's');
     $('restockBody').innerHTML = bySupplier
-      ? '<b>SLEAZY SUPPLIER:</b> “Psst, friend. Gaps on the shelves — <b>' + spaces + '</b>. I fill every one tonight, at retail: <b>25</b> ' + COIN + ' a book. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”'
+      ? '<b>' + (upgrades.reliable ? 'RELIABLE SUPPLIER' : 'SLEAZY SUPPLIER') + ':</b> “Psst, friend. Gaps on the shelves — <b>' + spaces + '</b>. I fill every one tonight: <b>' + pendingRestock.perBook + '</b> ' + COIN + ' a book, and they sell for <b>25</b>. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”'
       : '<b>MYSTERIOUS MAN:</b> “Psst. Shelves are looking bare — <b>' + spaces + '</b>. I’ll fill every one tonight: <b>30</b> ' + COIN + ' a book, and they sell for <b>25</b>. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”';
     $('restockYes').textContent = coins >= pendingRestock.total ? 'Deal — pay ' + pendingRestock.total : 'You can\'t afford ' + pendingRestock.total;
     $('restockYes').disabled = coins < pendingRestock.total;
@@ -793,8 +842,8 @@ $('restockYes').addEventListener('click', () => {
   if (!pendingRestock) return;
   coins -= pendingRestock.total; refreshHUD();
   stats.restocked = pendingRestock.empty; stats.restockCost = pendingRestock.total;
-  for (const g of ['green', 'purple'])
-    while (shelfStock[g].length < SHELF_CAP) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = pendingRestock.perBook; shelfStock[g].push(b); }
+  for (const g of activeGenres)
+    while (shelfStock[g].length < capacityOf(g)) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = pendingRestock.perBook; shelfStock[g].push(b); }
   pendingRestock = null;
   $('restockPanel').style.display = 'none';
   proceedAfterRestock();
@@ -891,7 +940,7 @@ function updateEnding(dt) {
 
 function composeTally() {
   const profit = coins - dayStartCoins;
-  const leftBooks = shelfStock.green.concat(shelfStock.purple, carry);
+  const leftBooks = Object.values(shelfStock).flat().concat(carry);
   const invValue = leftBooks.reduce((a, b) => a + (b.cost || 0), 0);   // inventory at cost → Δ net worth = profit
   const invBoughtCost = leftBooks.reduce((a, b) => a + (b.cost || 0), 0);
   const netWorth = coins + invValue, nwDelta = netWorth - startNetWorth;
@@ -907,6 +956,7 @@ function composeTally() {
     'Walkouts — not in stock: <b>' + stats.walkStock + '</b><br>' +
     'Sellers turned away: <b>' + stats.turnedAway + '</b><br><br>' +
     '📚 Stock left: <b>' + leftBooks.length + '</b> books worth <b>' + invValue + ' 🪙</b> at cost<br>' +
+    (stats.shards ? '✦ Star Shards earned: <b>' + stats.shards + '</b> (balance: ' + shards + ')<br>' : '') +
     '🪙 Coins: <b>' + coins + '</b><br>' +
     '💰 <b>Net worth: ' + netWorth + ' 🪙</b> (opened at ' + startNetWorth + ') — change: <b style="color:' + (nwDelta >= 0 ? '#8fe08a' : '#e08a8a') + '">' + (nwDelta >= 0 ? '+' : '') + nwDelta + ' 🪙</b><br>' +
     'Cash-only day result: <b style="color:' + (profit >= 0 ? '#8fe08a' : '#e08a8a') + '">' + (profit >= 0 ? '+' : '') + profit + ' 🪙</b>';
@@ -920,40 +970,110 @@ $('restartBtn').addEventListener('click', () => {
   $('upgradesPanel').style.display = 'block';
 });
 $('nextDayBtn').addEventListener('click', startNextDay);
-const UP_COST = { supplier: 20, marketing: 20, bookcase: 20 };   // every Night Market item is 20 (Roy)
+// ---------- Night Market upgrade tree ----------
+// Unlock rule (Roy): an item is unlockable once its prerequisite has been
+// BOUGHT (boughtEver, persistent). Unlocking costs Star Shards (persistent);
+// buying costs coins and lasts for the current run only.
+const UPGRADES = [
+  { id: 'supplier',  icon: '🕶️', name: 'Sleazy Book Supplier', unlock: 0, cost: 20, desc: 'Knows a guy. When your shelves run completely dry, he slinks in and sells at full retail — and he takes over the nightly restock too: 25 a book instead of the Man\'s 30.' },
+  { id: 'marketing', icon: '📣', name: 'Marketing', unlock: 0, cost: 20, service: true, desc: 'A flyer run, a sandwich board out front, chalk arrows on the sidewalk. Word gets around: <b>+5 reputation</b>. Once per night.' },
+  { id: 'bookcase',  icon: '🗄️', name: 'Bookcase Upgrade', unlock: 0, cost: 20, desc: 'Proper three-tier bookcases, built overnight. Each case holds <b>9 books</b> instead of 6.' },
+  { id: 'appraisal', icon: '🔍', name: 'Appraisal Course', unlock: 2, cost: 20, desc: 'Learn to price at a glance: appraisal ranges are roughly <b>halved</b>.' },
+  { id: 'shelf',     icon: '📚', name: 'Extra Shelf', unlock: 2, cost: 30, repeatable: true, desc: 'One more bookcase, for your least-shelved genre. The shop fits 8 cases in total.' },
+  { id: 'chair',     icon: '🪑', name: 'Comfy Chair', unlock: 2, cost: 30, desc: 'A reading chair on the floor. One waiting customer can sit — while seated, their patience drains at <b>1/4 speed</b>.' },
+  { id: 'speed',     icon: '👟', name: 'Shopkeeper Speed', unlock: 2, cost: 30, desc: 'Comfortable shoes, efficient routes. <b>You move 20% faster.</b>' },
+  { id: 'cat',       icon: '🐱', name: 'Shop Cat', unlock: 3, cost: 40, prereq: 'supplier', desc: 'A cat moves in and roams the store. Customers near it <b>regain patience</b> — nobody stays annoyed next to a cat.' },
+  { id: 'reliable',  icon: '🤝', name: 'Reliable Supplier', unlock: 4, cost: 40, prereq: 'supplier', desc: 'Your supply line professionalizes: supplier books cost <b>23</b> and sell for <b>25</b>. No more retail restocks.' },
+  { id: 'speed2',    icon: '👟', name: 'Shopkeeper Speed II', unlock: 5, cost: 50, prereq: 'speed', desc: 'You know every shortcut in this shop. <b>You move 40% faster.</b>' },
+  { id: 'bookcase2', icon: '🗄️', name: 'Bookcase Upgrade II', unlock: 5, cost: 40, prereq: 'bookcase', desc: 'Floor-to-ceiling cases. Each holds <b>12 books</b>.' },
+  { id: 'checker',   icon: '🧾', name: 'Checker', unlock: 5, cost: 60, prereq: 'shelf', desc: 'Hire a cashier: the front buyer at the checkout is rung up automatically every <b>4 seconds</b>.' },
+  { id: 'poetry',    icon: '🎨', name: 'New Genre: Poetry', unlock: 5, cost: 80, prereq: 'bookcase', genre: true, desc: 'Open a <b>Poetry</b> section (orange) — new genre, new customers. Includes its first bookcase.' },
+  { id: 'cat2',      icon: '🐱', name: 'Second Cat', unlock: 8, cost: 60, prereq: 'cat', desc: 'The first cat gets a colleague. Two roaming circles of calm.' },
+  { id: 'checker2',  icon: '🧾', name: 'Second Checker', unlock: 8, cost: 80, prereq: 'checker', desc: 'A second cashier joins: automatic checkout every <b>2 seconds</b>.' },
+  { id: 'comics',    icon: '🎭', name: 'New Genre: Comics', unlock: 8, cost: 100, prereq: 'poetry', genre: true, desc: 'Open a <b>Comics</b> section (teal). Includes its first bookcase.' },
+];
+const upById = id => UPGRADES.find(u => u.id === id);
+function upState(u) {
+  if (u.service) return marketingTonight ? 'done' : 'buy';
+  if (u.prereq && !boughtEver[u.prereq]) return 'locked';
+  if (u.unlock > 0 && !unlocked[u.id]) return 'unlock';
+  if (u.genre && casePlan.length >= 8) return 'noslot';
+  if (u.repeatable) return casePlan.length >= 8 ? 'maxed' : 'buy';
+  return upgrades[u.id] ? 'owned' : 'buy';
+}
 function renderUpgrades() {
   $('upCoins').textContent = coins;
-  document.querySelectorAll('.upbuy').forEach(btn => {
-    const key = btn.dataset.up;
-    if (key === 'marketing') {
-      btn.innerHTML = marketingTonight ? 'Running tonight ✓' : UP_COST.marketing + ' ' + COIN;
-      btn.disabled = marketingTonight || coins < UP_COST.marketing;
-      $('upCard-marketing').classList.toggle('owned', marketingTonight);
-    }
-    else if (upgrades[key]) { btn.textContent = 'Owned ✓'; btn.disabled = true; $('upCard-' + key).classList.add('owned'); }
-    else { btn.innerHTML = UP_COST[key] + ' ' + COIN; btn.disabled = coins < UP_COST[key]; $('upCard-' + key).classList.remove('owned'); }
-  });
+  $('upShards').textContent = shards;
+  $('upCards').innerHTML = UPGRADES.map(u => {
+    const st = upState(u);
+    let foot;
+    if (st === 'locked') foot = '<p class="locknote">🔒 Buy <b>' + upById(u.prereq).name + '</b> first to reveal this</p>';
+    else if (st === 'unlock') foot = '<button class="primary" data-act="unlock" data-up="' + u.id + '"' + (shards < u.unlock ? ' disabled' : '') + '>Unlock — ' + u.unlock + ' ✦</button>';
+    else if (st === 'owned') foot = '<button disabled>Owned ✓</button>';
+    else if (st === 'done') foot = '<button disabled>Running tonight ✓</button>';
+    else if (st === 'maxed') foot = '<button disabled>All 8 cases built ✓</button>';
+    else if (st === 'noslot') foot = '<p class="locknote">No floor space left for a new section</p>';
+    else foot = '<button class="primary" data-act="buy" data-up="' + u.id + '"' + (coins < u.cost ? ' disabled' : '') + '>' + u.cost + ' ' + COIN + '</button>';
+    const note = u.repeatable && upgrades.shelves ? '<p class="locknote">Owned ×' + upgrades.shelves + '</p>' : '';
+    return '<div class="upcard' + (st === 'locked' ? ' locked' : '') + (st === 'owned' || st === 'done' ? ' owned' : '') + '">' +
+      '<div class="icon">' + u.icon + '</div><h3>' + u.name + '</h3><p>' + u.desc + '</p>' + note + foot + '</div>';
+  }).join('');
 }
-document.querySelectorAll('.upbuy').forEach(btn => btn.addEventListener('click', () => {
-  const key = btn.dataset.up;
-  const cost = UP_COST[key];
-  if (coins < cost) return;
-  if (key === 'marketing') {
+$('upCards').addEventListener('click', e => {
+  const btn = e.target && e.target.closest ? e.target.closest('button[data-up]') : null;
+  if (!btn || btn.disabled) return;
+  const u = upById(btn.dataset.up);
+  if (btn.dataset.act === 'unlock') {
+    if (shards < u.unlock) return;
+    shards -= u.unlock; unlocked[u.id] = true; saveMeta(); sfx('buy'); renderUpgrades(); return;
+  }
+  if (coins < u.cost) return;
+  if (u.service) {
     if (marketingTonight) return;
-    coins -= cost; marketingTonight = true; reputation += 5;   // word gets around
+    coins -= u.cost; marketingTonight = true; reputation += 5;   // word gets around
   } else {
-    if (upgrades[key]) return;
-    coins -= cost; upgrades[key] = true;
+    coins -= u.cost; boughtEver[u.id] = true; saveMeta();
+    if (u.id === 'shelf') {
+      upgrades.shelves++;
+      const counts = {}; for (const g of casePlan) counts[g] = (counts[g] || 0) + 1;
+      casePlan.push(activeGenres.reduce((a, b) => (counts[a] || 0) <= (counts[b] || 0) ? a : b));
+    } else if (u.genre) { upgrades[u.id] = true; casePlan.push(u.id); }
+    else upgrades[u.id] = true;
   }
   refreshHUD(); sfx('buy');
   renderUpgrades();
-}));
+});
 $('introBar').addEventListener('click', () => { if (endingStep >= 0) advanceEnding(); else advanceIntro(); });
 
 // ---------- Draw ----------
+function drawCat(cat) {
+  ctx.save(); ctx.translate(cat.x, cat.y);
+  ctx.fillStyle = 'rgba(255,170,60,.07)'; ctx.beginPath(); ctx.arc(0, 0, CAT_RADIUS, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 8, 13, 3.6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = cat.color; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(-10, 2); ctx.quadraticCurveTo(-17, -4, -14, -11); ctx.stroke();
+  ctx.fillStyle = cat.color;
+  ctx.beginPath(); ctx.ellipse(0, 2, 12, 7.4, 0, 0, Math.PI * 2); ctx.fill();          // body
+  ctx.beginPath(); ctx.arc(10, -3, 6.4, 0, Math.PI * 2); ctx.fill();                    // head
+  ctx.beginPath(); ctx.moveTo(5.4, -7.4); ctx.lineTo(7.2, -12.4); ctx.lineTo(9.8, -8.2); ctx.closePath(); ctx.fill();   // ears
+  ctx.beginPath(); ctx.moveTo(11.4, -8.4); ctx.lineTo(14.6, -12.2); ctx.lineTo(15.4, -7.4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.arc(12.4, -3.4, 1.1, 0, Math.PI * 2); ctx.fill();   // eye
+  if (cat.nap > 0) { ctx.fillStyle = 'rgba(240,240,255,.85)'; ctx.font = 'bold 11px Georgia'; ctx.textAlign = 'center'; ctx.fillText('z', 16, -14); }
+  ctx.restore();
+}
+function drawChair() {
+  ctx.save(); ctx.translate(CHAIR.x, CHAIR.y);
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-19, 24, 42, 6);
+  ctx.fillStyle = '#8c3b4a'; ctx.fillRect(-17, -20, 34, 34);          // back
+  ctx.fillStyle = '#a34a5e'; ctx.fillRect(-13, -16, 26, 26);
+  ctx.fillStyle = '#8c3b4a'; ctx.fillRect(-21, 8, 42, 12);            // seat
+  ctx.fillStyle = '#c96a7a'; ctx.fillRect(-21, 8, 42, 4);
+  ctx.fillStyle = '#6e2c38'; ctx.fillRect(-23, -2, 6, 20); ctx.fillRect(17, -2, 6, 20);   // arms
+  ctx.restore();
+}
 function drawCustomer(c) {
   ctx.save();
   ctx.translate(c.x, c.y);
+  if (cats.length && inCatAura(c)) { ctx.fillStyle = 'rgba(255,110,150,.9)'; ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.fillText('♥', 0, -34); }
   ctx.scale(1.9, 1.9);
   const L = c.look, x = 0, y = 0;
   const moving = !(c.state === 'haggle' || c.state === 'waitShelf');
@@ -1072,7 +1192,9 @@ function drawBook(x, y, genre, special, s) {
 }
 const SPINE_SHADES = {
   green:  ['#2e7d43', '#3fae5a', '#57bd74', '#2c6e3e', '#6fbf5e', '#47855a'],
-  purple: ['#6d359e', '#8b4fc4', '#a06fd0', '#7c46b0', '#9668c9', '#5d2f8a']
+  purple: ['#6d359e', '#8b4fc4', '#a06fd0', '#7c46b0', '#9668c9', '#5d2f8a'],
+  poetry: ['#c96a1e', '#e08a3c', '#eda45c', '#b85c14', '#e59a4a', '#a34e10'],
+  comics: ['#1f9e8a', '#3cc4b0', '#5fd0bf', '#178a76', '#45bfa9', '#15705f']
 };
 function draw() {
   ctx.clearRect(0, 0, W, H);
@@ -1087,9 +1209,12 @@ function draw() {
   ctx.fillStyle = '#74343a'; ctx.fillRect(402, 378, 156, 58);
   ctx.strokeStyle = '#c9a35a'; ctx.lineWidth = 3; ctx.strokeRect(409, 385, 142, 44); ctx.lineWidth = 1;
   // (Space for six more bookshelves is kept free in the layout but not drawn.)
+  // cats roam behind the furniture; the Comfy Chair sits mid-floor
+  for (const cat of cats) drawCat(cat);
+  if (upgrades.chair) drawChair();
   // shelves — proper bookcases
-  for (const g of ['green', 'purple']) {
-    const s = SHELF[g];
+  for (const cs of cases) {
+    const g = cs.genre, s = cs;
     ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(s.x - 4, s.y + s.h + 6, s.w + 8, 8);   // shadow
     ctx.fillStyle = '#43301d'; ctx.fillRect(s.x - 6, s.y - 6, s.w + 12, s.h + 12);          // back panel
     ctx.fillStyle = '#7d5a30';
@@ -1101,8 +1226,9 @@ function draw() {
     ctx.fillStyle = '#96733d';
     for (let t = 1; t < tiers; t++) ctx.fillRect(s.x, s.y + t * tierH, s.w, 5);               // middle boards
     ctx.fillRect(s.x, s.y + s.h - 3, s.w, 3);
-    const PER_TIER = 3;
-    shelfStock[g].slice(0, SHELF_CAP).forEach((b, i) => {
+    const PER_TIER = caseCap() / SHELF_TIERS;
+    const ci = casesOf(g).indexOf(s);
+    shelfStock[g].slice(ci * caseCap(), (ci + 1) * caseCap()).forEach((b, i) => {
       const tier = Math.floor(i / PER_TIER), slot = i % PER_TIER;
       const surfY = s.y + (tier + 1) * tierH + (tier === tiers - 1 ? 3 : 0);                  // standing surface
       const bh = 34 + ((i * 37) % 8), bw = 24;
@@ -1121,7 +1247,7 @@ function draw() {
     ctx.fillStyle = '#33261a'; ctx.fillRect(s.x + s.w / 2 - 50, s.y - 34, 100, 17);
     ctx.strokeStyle = GENRE_COLOR[g]; ctx.strokeRect(s.x + s.w / 2 - 50, s.y - 34, 100, 17);
     ctx.fillStyle = '#f3e9d2'; ctx.font = 'bold 11.5px Georgia'; ctx.textAlign = 'center';
-    ctx.fillText(GENRE_NAME[g].toUpperCase() + ' (' + shelfStock[g].length + '/' + SHELF_CAP + ')', s.x + s.w / 2, s.y - 21.5);
+    ctx.fillText(GENRE_NAME[g].toUpperCase() + ' (' + shelfStock[g].length + '/' + capacityOf(g) + ')', s.x + s.w / 2, s.y - 21.5);
   }
   // counters — panelled wood, countertop slab, props
   for (const [c, label, isBuy] of [[BUY_COUNTER, 'WE BUY BOOKS', true], [SELL_COUNTER, 'CHECKOUT', false]]) {
