@@ -1006,8 +1006,10 @@ function upState(u) {
 function renderUpgrades() {
   $('upCoins').textContent = coins;
   $('upShards').textContent = shards;
-  // Marketing is pinned as the top option, always (Roy, 2026-10-16).
-  $('upCards').innerHTML = UPGRADES.filter(u => upState(u) !== 'hidden').sort((a, b) => (a.id === 'marketing' ? -1 : b.id === 'marketing' ? 1 : 0)).map(u => {
+  // Order (Roy, 2026-10-16): Marketing pinned on top, always; actionable
+  // cards next; owned/finished cards sink to the bottom of the list.
+  const upRank = u => u.id === 'marketing' ? 0 : (['owned', 'done', 'maxed'].includes(upState(u)) ? 2 : 1);
+  $('upCards').innerHTML = UPGRADES.filter(u => upState(u) !== 'hidden').sort((a, b) => upRank(a) - upRank(b)).map(u => {
     const st = upState(u);
     let foot;
     if (st === 'unlock') foot = '<button class="primary" data-act="unlock" data-up="' + u.id + '"' + (shards < u.unlock ? ' disabled' : '') + '>Unlock ' + u.unlock + ' ✦</button>';
