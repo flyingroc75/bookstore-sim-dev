@@ -234,7 +234,7 @@ const RESERVED_SLOTS = [
 ];
 const BUY_COUNTER  = { x: 90,  y: 452, w: 300, h: 52 };
 const SELL_COUNTER = { x: 570, y: 452, w: 300, h: 52 };
-const DOOR = { x: 84, y: 588 };
+const DOOR = { x: 84, y: 534 };   // the threshold: just inside the storefront, ABOVE the pavement (Roy, 2026-10-16). People spawn outside (below the canvas) and come in through it.
 let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 
 // ---------- State ----------
@@ -423,8 +423,8 @@ let cid = 0;
 function spawnCustomer() {
   const isBuyer = Math.random() < 0.6;   // sellers = 40% of arrivals (was 33%, +20%)
   const genre = activeGenres[Math.floor(Math.random() * activeGenres.length)];
-  const c = { id: cid++, x: DOOR.x + rf(-14, 14), y: DOOR.y, genre,
-              patience: 100 * PATIENCE_MULT, state: 'enter', book: null, queueIdx: 0 };
+  const c = { id: cid++, x: DOOR.x + rf(-18, 18), y: H + 18, genre,
+              patience: 100 * PATIENCE_MULT, state: 'approach', book: null, queueIdx: 0 };   // appears outside, crosses the street/sidewalk, comes in through the door
   // --- sprite look (random per customer) ---
   const SKINS = ['#f2c894', '#e0ac69', '#c68850', '#8d5524', '#ffdbac'];
   const HAIRS = ['#2b2b2b', '#5a3a1a', '#8a6d3f', '#b5522a', '#d9d9d9', '#3a5a8c'];
@@ -719,7 +719,12 @@ function update(dt) {
   const bq = buyQueue(), sq = sellQueue();
   const shelfWaiters = {}; for (const g of activeGenres) shelfWaiters[g] = 0;
   for (const c of customers) {
-    if (c.state === 'leaveHappy' || c.state === 'leaveMad') { if (moveToward(c, DOOR.x, DOOR.y + 26, 150 * SPEED_MULT, dt)) c.gone = true; continue; }   // reaching the door despawns them (Roy, 2026-10-16: leavers used to hover stuck at the door — their target y=614 sat above the old y>616 removal line)
+    if (c.state === 'approach') { if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) c.state = 'enter'; continue; }   // outside → in through the door (no patience drain out there)
+    if (c.state === 'leaveHappy' || c.state === 'leaveMad') {   // out through the door first, then away across the pavement
+      if (!c.out) { if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) { c.out = true; c.outX = DOOR.x + rf(-18, 18); } }
+      else if (moveToward(c, c.outX, H + 24, 150 * SPEED_MULT, dt)) c.gone = true;
+      continue;
+    }
     if (c.kind === 'seller') {
       if (c.state === 'enter') { c.state = 'toBuy'; }
       if (c.state === 'toBuy' || c.state === 'haggle') {
@@ -1372,9 +1377,11 @@ function draw() {
       ctx.fillRect(c.x + c.w - 103, c.y - 8, 14, 2.6);
     }
   }
-  // door
-  ctx.fillStyle = '#33261a'; ctx.fillRect(DOOR.x - 34, H - 14, 68, 14);
-  ctx.fillStyle = '#c9b18c'; ctx.font = '12px Georgia'; ctx.textAlign = 'center'; ctx.fillText('DOOR', DOOR.x, H - 20);
+  // door — a doorway in the storefront, above the pavement
+  ctx.fillStyle = '#2e2115'; ctx.fillRect(DOOR.x - 32, DOOR.y - 16, 64, 32);
+  ctx.fillStyle = '#17100a'; ctx.fillRect(DOOR.x - 32, DOOR.y - 16, 64, 5);
+  ctx.fillStyle = '#c9b18c'; ctx.fillRect(DOOR.x - 32, DOOR.y + 11, 64, 3);
+  ctx.font = '12px Georgia'; ctx.textAlign = 'center'; ctx.fillText('DOOR', DOOR.x, DOOR.y - 24);
   // customers
   for (const c of customers) {
     drawCustomer(c);
