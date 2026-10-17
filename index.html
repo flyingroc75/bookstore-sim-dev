@@ -350,12 +350,22 @@ function updateIntro(dt) {
 
 function reset() {
   coins = 200;
-  shelfStock = { green: [], purple: [] };
-  // Starting stock is priced flat: every opening book sells for 25, so the
-  // run always opens at 200 coins + 12 x 25 = 500 net worth.
-  for (let i = 0; i < 6; i++) {
-    const g = makeBook('green', false); g.sellPrice = 25; g.cost = 25; shelfStock.green.push(g);
-    const p = makeBook('purple', false); p.sellPrice = 25; p.cost = 25; shelfStock.purple.push(p);
+  // The SHELVES are kept across runs (Roy, 2026-10-16): the new run restores
+  // the case layout the shop ended with — extra cases and genre cases alike.
+  // Other upgrades are NOT kept; they are re-bought each run as before.
+  // Kept genre cases count as owned (their genre is in play, card shows
+  // Owned) and the extra-shelf count is derived from the layout.
+  upgrades = freshUpgrades();
+  casePlan = keptCasePlan && keptCasePlan.length ? keptCasePlan.slice() : ['green', 'purple'];
+  for (const g of new Set(casePlan)) if (g !== 'green' && g !== 'purple') upgrades[g] = true;
+  upgrades.shelves = Math.max(0, casePlan.length - new Set(casePlan).size);
+  applyUpgrades();
+  // Every kept shelf starts stocked with books worth 25 (flat, like the
+  // original opening stock): each genre filled to its case capacity.
+  shelfStock = {};
+  for (const g of activeGenres) {
+    shelfStock[g] = [];
+    while (shelfStock[g].length < capacityOf(g)) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = 25; shelfStock[g].push(b); }
   }
   carry = [];
   customers = [];
@@ -366,11 +376,6 @@ function reset() {
   player = { x: 480, y: 385, speed: 235 * SPEED_MULT, target: null };
   document.getElementById('tallyPanel').style.display = 'none';
   document.getElementById('hagglePanel').style.display = 'none';
-  // Store upgrades are KEPT across runs now (Roy, 2026-10-16): a new run
-  // restores whatever the shop had bought — cases, genres, cats, all of it.
-  upgrades = keptUpgrades ? Object.assign(freshUpgrades(), keptUpgrades) : freshUpgrades();
-  casePlan = keptCasePlan && keptCasePlan.length ? keptCasePlan.slice() : ['green', 'purple'];
-  applyUpgrades();
   if (!storySeen) startIntro();
 }
 
@@ -403,9 +408,9 @@ const SAVE_KEY = 'bookstoreSim.v1';
 let shards = 0;
 let unlocked = {};      // upgrade id -> true (persistent)
 let boughtEver = {};    // upgrade id -> true (persistent; gates unlock prerequisites)
-let keptUpgrades = null, keptCasePlan = null;   // bought store upgrades + case layout, kept across runs (Roy, 2026-10-16)
-function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, upgrades, casePlan })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (d.upgrades) keptUpgrades = d.upgrades; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; } } catch (e) {} }
+let keptCasePlan = null;   // the shop's case layout (its shelves), kept across runs (Roy, 2026-10-16)
+function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; } } catch (e) {} }
 loadMeta();
 
 // ---------- Customers ----------
@@ -1002,8 +1007,9 @@ $('nextDayBtn').addEventListener('click', startNextDay);
 // ---------- Night Market upgrade tree ----------
 // Unlock rule (Roy): an item is unlockable once its prerequisite has been
 // BOUGHT (boughtEver, persistent). Unlocking costs Star Shards (persistent);
-// bought store upgrades are KEPT across runs (Roy, 2026-10-16 — supersedes
-// the earlier purchases-are-per-run rule). Marketing stays a per-night service.
+// purchases are per run — EXCEPT the shelves: the case layout (casePlan)
+// is kept across runs and a new run restocks every kept shelf with
+// 25-value books (Roy, 2026-10-16).
 const UPGRADES = [
   { id: 'supplier',  svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><rect x=\"14\" y=\"34\" width=\"32\" height=\"18\" rx=\"3\" fill=\"#7a3b8c\"/><rect x=\"26\" y=\"24\" width=\"8\" height=\"12\" fill=\"#e8b48c\"/><circle cx=\"30\" cy=\"19\" r=\"7.5\" fill=\"#e8b48c\"/><rect x=\"17\" y=\"13.5\" width=\"26\" height=\"3.6\" rx=\"1.8\" fill=\"#232028\"/><rect x=\"23\" y=\"5\" width=\"14\" height=\"9\" rx=\"2\" fill=\"#232028\"/><rect x=\"21.5\" y=\"18\" width=\"17\" height=\"4\" rx=\"2\" fill=\"#14100c\"/><rect x=\"41\" y=\"36\" width=\"11\" height=\"14\" rx=\"2\" fill=\"#ffd94a\" transform=\"rotate(14 46 43)\"/><text x=\"46.5\" y=\"46.5\" font-size=\"9\" font-weight=\"bold\" fill=\"#7a5410\" text-anchor=\"middle\" transform=\"rotate(14 46 43)\">$</text></svg>", icon: '🕶️', name: 'Sleazy Book Supplier', unlock: 0, cost: 20, desc: 'Knows a guy — himself. He <b>replaces the Mysterious Man</b> for the nightly restock: <b>25</b> a book instead of the Man\'s 30. (The Man still collects the rent.)' },
   { id: 'marketing', svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><path d=\"M10 26 L34 16 L34 44 L10 34 Z\" fill=\"#c4503c\"/><rect x=\"6\" y=\"25\" width=\"5\" height=\"10\" rx=\"2\" fill=\"#8c3527\"/><path d=\"M16 35 L20 35 L22 47 L16 47 Z\" fill=\"#6e4630\"/><path d=\"M40 20 a14 14 0 0 1 0 20\" stroke=\"#ffd94a\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M45 15 a21 21 0 0 1 0 30\" stroke=\"#ffd94a\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" opacity=\".55\"/></svg>", icon: '📣', name: 'Marketing', unlock: 0, cost: 20, service: true, desc: 'A flyer run, a sandwich board out front, chalk arrows on the sidewalk. Word gets around: <b>+5 reputation</b>. Once per night.' },
@@ -1090,8 +1096,8 @@ $('upCards').addEventListener('click', e => {
       casePlan.push(activeGenres.reduce((a, b) => (counts[a] || 0) <= (counts[b] || 0) ? a : b));
     } else if (u.genre) { upgrades[u.id] = true; casePlan.push(u.id); }
     else upgrades[u.id] = true;
-    keptUpgrades = Object.assign({}, upgrades); keptCasePlan = casePlan.slice();
-    saveMeta();   // after the purchase lands, so the kept-upgrades save is current
+    keptCasePlan = casePlan.slice();
+    saveMeta();   // after the purchase lands, so the kept-shelves save is current
   }
   refreshHUD(); sfx('buy');
   renderUpgrades();
