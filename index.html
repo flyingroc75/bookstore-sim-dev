@@ -1456,7 +1456,7 @@ function draw() {
   ctx.strokeStyle = '#c9a35a'; ctx.lineWidth = 3; ctx.strokeRect(409, 353, 142, 44); ctx.lineWidth = 1;
   // (Space for six more bookshelves is kept free in the layout but not drawn.)
   // cats roam behind the furniture; the Comfy Chair sits mid-floor
-  for (const cat of cats) drawCat(cat);
+  if (introStep < 0) for (const cat of cats) drawCat(cat);   // the inherited cat isn't in the intro sale scene — it moves in once the run starts (Roy, 2026-10-17)
   if (upgrades.chair) drawChair();
   // shelves — proper bookcases
   for (const cs of cases) {
