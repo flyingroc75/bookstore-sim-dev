@@ -713,7 +713,7 @@ function doInteract() {
     const before = carry.length;
     let moved = 0;
     carry = carry.filter(bk => { if (bk.genre === g && shelfStock[g].length < capacityOf(g)) { shelfStock[g].push(bk); moved++; return false; } return true; });
-    if (moved) { flash('Stocked ' + GENRE_NAME[g]); sfx('thunk'); }
+    if (moved) { sfx('thunk'); }   // no 'Stocked X' text anymore (Roy, 2026-10-17) — the thunk says it
     else if (before) flash(GENRE_NAME[g] + ' shelf is full!');
   }
 }
