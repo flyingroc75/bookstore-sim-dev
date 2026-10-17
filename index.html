@@ -1929,12 +1929,25 @@ $('continueBtn').addEventListener('click', () => {
   musicStart();
   restoreRun(snap);   // back to the morning of the day last played, state intact (Roy, 2026-10-17)
 });
+let wipeArmed = false;
 $('newGameBtn').addEventListener('click', () => {
+  // New Game means NEW (Roy, 2026-10-17: "I got four shards when I clicked
+  // new") — the whole save goes: shards, unlocks, collections, shelves, cat,
+  // and the old Continue point. With progress on the line, the first click
+  // arms the button instead of erasing on a stray tap.
+  const hasProgress = shards > 0 || Object.keys(collected).length > 0 || Object.keys(unlocked).length > 0 || !!loadRunSnapshot();
+  if (hasProgress && !wipeArmed) { wipeArmed = true; $('newGameBtn').textContent = 'Erase save & start fresh?'; return; }
+  wipeArmed = false;
+  shards = 0; unlocked = {}; boughtEver = {}; collected = {}; collectionsDone = {};
+  keptCasePlan = null; keptCap = 6; keptCats = null; inheritCat = false;
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  storySeen = false;
   titleOpen = false;
   $('titlePanel').style.display = 'none';
   musicStart();
   snapshotArmed = true;   // the fresh Day 1 becomes the new Continue point
   reset();                // scratch run: story intro if unseen, Day 1 behind it
+  updateColCount();
   if (storySeen) running = true;
 });
 titleRaf = requestAnimationFrame(drawTitleArt);
