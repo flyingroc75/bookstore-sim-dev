@@ -171,7 +171,7 @@
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
     <div class="uphead">
       <div class="titlerow"><h2>🌙 Night Market</h2><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
-      <div style="margin-top:4px; font-size:15px; color:#e8c87a;">🪙 <span id="upCoins">0</span> &nbsp;·&nbsp; ✦ <span id="upShards">0</span> &nbsp;·&nbsp; ⭐ <span id="upRep">25</span></div>
+      <div style="margin-top:4px; font-size:15px; color:#e8c87a;">🪙 <span id="upCoins">0</span> &nbsp;·&nbsp; ✦ <span id="upShards">0</span> &nbsp;·&nbsp; <span id="upRepFace">😐</span> <span id="upRep">25</span></div>
     </div>
     <div id="upScroll"><div class="upcards" id="upCards"></div></div>
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
@@ -548,6 +548,8 @@ function reset() {
   for (const g of new Set(casePlan)) if (g !== 'green' && g !== 'purple') upgrades[g] = true;
   if (inheritCat && keptCats) { upgrades.cat = !!keptCats.cat; upgrades.cat2 = !!keptCats.cat2 && upgrades.cat; }   // the cat changes hands only when a run actually ends (Roy, 2026-10-17)
   inheritCat = false;
+  if (keptCap >= 9) upgrades.bookcase = true;   // the kept shelves keep their upgraded tier (Roy, 2026-10-17)
+  if (keptCap >= 12) upgrades.bookcase2 = true;
   upgrades.shelves = Math.max(0, casePlan.length - new Set(casePlan).size);
   marketingActive = false;
   applyUpgrades();
@@ -605,8 +607,11 @@ let collected = {};        // collection title -> true (persistent meta-progress
 let collectionsDone = {};  // collection id -> true once its completion shards were awarded
 let keptCats = null;       // the cat(s) this run owns, saved at purchase. Inherited ONLY through the ending's Start Over (Roy, 2026-10-17): bankruptcy passes the cat to the next owner, but starting from scratch (page load / refresh) does not. Checkers are never kept.
 let inheritCat = false;    // armed by the Start Over button; consumed by reset()
-function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, collected, collectionsDone })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
+let keptCap = 6;           // the bookcase tier the shelves carry (6/9/12) — kept WITH the shelves across runs (Roy, 2026-10-17: on reset the cases "became not upgraded")
+function saveMeta() { try {
+    if (typeof upgrades !== 'undefined' && upgrades && (upgrades.bookcase || upgrades.bookcase2)) keptCap = Math.max(keptCap, upgrades.bookcase2 ? 12 : 9);   // the shelves remember their tier
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, keptCap, collected, collectionsDone })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
 loadMeta();
 
 // ---------- Customers ----------
@@ -852,6 +857,10 @@ addEventListener('pointerdown', function unlock() { musicStart(); removeEventLis
 // ---------- Flash message ----------
 let flashTxt = '', flashT = 0;
 function flash(t) { flashTxt = t; flashT = 2.2; }
+function clearDayFX() {
+  flashT = 0; floaters = []; bursts = []; shardFlights = []; goldGlowT = 0; redGlowT = 0;
+  $('actionBtn').style.display = 'none';
+}
 
 // ---------- Update ----------
 const keys = {};
@@ -1047,6 +1056,7 @@ function showClosing(next) {
 }
 function endDay() {
   over = true; running = false;
+  clearDayFX();   // no frozen flash text, floaters or stray Interact button in the night screens (Roy, 2026-10-17)
   refreshHUD();   // settle the HUD NOW — a last-second sale/purchase otherwise leaves it stale vs. the rent check
   if (haggle) closeHaggle('decline');
   $('hagglePanel').style.display = 'none';
@@ -1173,6 +1183,7 @@ function spawnConfetti() {
 }
 function startEnding() {
   visitor = null;
+  clearDayFX();
   endingStep = 0; playerLeaving = false;
   transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
   endBuyer = { id: 998, x: 446, y: 356, state: 'haggle', kind: 'buyer', genre: 'green',
@@ -1281,6 +1292,7 @@ function renderUpgrades() {
   // coins / shards / reputation are repeated here — numbers only, no
   // explanatory text (that removal still stands).
   $('upCoins').textContent = coins; $('upShards').textContent = shards; $('upRep').textContent = reputation;
+  $('upRepFace').textContent = reputation <= 0 ? '💀' : reputation >= 40 ? '😀' : reputation >= 30 ? '🙂' : reputation >= 18 ? '😐' : reputation >= 8 ? '🙁' : '😠';   // same face as the HUD — never a star (Roy, 2026-10-17)
   // Order (Roy, 2026-10-16): Marketing pinned on top, always; actionable
   // cards next; owned/finished cards sink to the bottom of the list.
   const upRank = u => u.id === 'marketing' ? 0 : (['owned', 'done', 'maxed'].includes(upState(u)) ? 2 : 1);
@@ -1339,6 +1351,7 @@ $('upCards').addEventListener('click', e => {
     else upgrades[u.id] = true;
     keptCasePlan = casePlan.slice();
     keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
+    keptCap = upgrades.bookcase2 ? 12 : upgrades.bookcase ? 9 : 6;
     saveMeta();   // after the purchase lands, so the kept-shelves/cats save is current
   }
   refreshHUD(); sfx('buy');
