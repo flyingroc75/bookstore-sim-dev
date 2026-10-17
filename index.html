@@ -137,6 +137,7 @@
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
     <div class="uphead">
       <div class="titlerow"><h2>🌙 Night Market</h2><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
+      <div style="margin-top:4px; font-size:15px; color:#e8c87a;">🪙 <span id="upCoins">0</span> &nbsp;·&nbsp; ✦ <span id="upShards">0</span> &nbsp;·&nbsp; ⭐ <span id="upRep">25</span></div>
     </div>
     <div id="upScroll"><div class="upcards" id="upCards"></div></div>
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
@@ -1049,8 +1050,10 @@ function upState(u) {
   return upgrades[u.id] ? 'owned' : 'buy';
 }
 function renderUpgrades() {
-  // (Coin/shard balances live in the top HUD; the market header carries no
-  // explanatory text — Roy, 2026-10-16.)
+  // Balances in the header (Roy, 2026-10-16): the panel covers the HUD, so
+  // coins / shards / reputation are repeated here — numbers only, no
+  // explanatory text (that removal still stands).
+  $('upCoins').textContent = coins; $('upShards').textContent = shards; $('upRep').textContent = reputation;
   // Order (Roy, 2026-10-16): Marketing pinned on top, always; actionable
   // cards next; owned/finished cards sink to the bottom of the list.
   const upRank = u => u.id === 'marketing' ? 0 : (['owned', 'done', 'maxed'].includes(upState(u)) ? 2 : 1);
