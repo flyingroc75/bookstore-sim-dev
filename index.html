@@ -48,6 +48,18 @@
   .uphead .titlerow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .uphead h2 { margin:0; }
   #nextDayBtn { white-space:nowrap; }
+  /* Phones (Roy's screenshot, 2026-10-16): panels were sized against the
+     short canvas box, so the market header (wrapped title + 3-line balance)
+     ate the panel and the cards got a sliver. On narrow screens panels
+     pin to the viewport at near-full height, and the header goes compact
+     with the title on one line. */
+  @media (max-width: 760px) {
+    .panel { position:fixed; left:50%; top:50%; width:94vw; max-width:94vw; max-height:92dvh; z-index:50; }
+    #upgradesPanel { max-height:92dvh; }
+    #upgradesPanel h2 { font-size:19px; white-space:nowrap; }
+    #nextDayBtn { font-size:13px; padding:7px 10px; }
+    .upcard { width:97px; }
+  }
   .panel h2 { color:#e8c87a; font-size:18px; margin-bottom:10px; }
   .panel p { margin:5px 0; font-size:15px; }
   .panel .row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center; }
@@ -125,7 +137,6 @@
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
     <div class="uphead">
       <div class="titlerow"><h2>🌙 Night Market</h2><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
-      <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · <b id="upShards">0</b> ✦ · Unlocks are permanent; purchases apply from tomorrow. Sell ✦ special books to earn Star Shards.</p>
     </div>
     <div id="upScroll"><div class="upcards" id="upCards"></div></div>
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
@@ -1015,8 +1026,8 @@ function upState(u) {
   return upgrades[u.id] ? 'owned' : 'buy';
 }
 function renderUpgrades() {
-  $('upCoins').textContent = coins;
-  $('upShards').textContent = shards;
+  // (Coin/shard balances live in the top HUD; the market header carries no
+  // explanatory text — Roy, 2026-10-16.)
   // Order (Roy, 2026-10-16): Marketing pinned on top, always; actionable
   // cards next; owned/finished cards sink to the bottom of the list.
   const upRank = u => u.id === 'marketing' ? 0 : (['owned', 'done', 'maxed'].includes(upState(u)) ? 2 : 1);
