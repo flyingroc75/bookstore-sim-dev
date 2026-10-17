@@ -21,14 +21,21 @@
     display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; }
   #closeOverlay .big { font-size:44px; color:#f3e9d2; font-family:Georgia,serif; text-shadow:0 2px 10px #000; }
   #closeOverlay .sub { font-size:17px; color:#d8c9a3; margin-top:8px; font-style:italic; }
-  .upcards { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
-  .upcard { background:#2b1f12; border:1.5px solid #8a6d3f; border-radius:12px; width:204px; padding:10px 11px; text-align:center; }
+  .upcards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+  .upcard { background:#2b1f12; border:1.5px solid #8a6d3f; border-radius:12px; width:106px; padding:8px 6px 7px; text-align:center; }
   .upcard.owned { border-color:#7fae5a; opacity:.85; }
-  .upcard h3 { margin:8px 0 4px; font-size:16.5px; color:#f3e9d2; }
-  .upcard p { margin:0 0 8px; font-size:13px; color:#cbbd97; line-height:1.32; min-height:52px; }
-  .upcard .icon { height:52px; display:flex; align-items:center; justify-content:center; font-size:40px; }
-  .upcard.locked { opacity:.55; filter:grayscale(.8); }
-  .upcard .locknote { font-size:12px; color:#a08c5f; min-height:0; margin:0 0 8px; }
+  .upcard h3 { margin:5px 0 6px; font-size:12.5px; line-height:1.25; color:#f3e9d2; min-height:31px; display:flex; align-items:center; justify-content:center; }
+  .upcard .icon { height:46px; display:flex; align-items:center; justify-content:center; font-size:34px; cursor:pointer; }
+  .upcard .icon svg { width:44px; height:44px; }
+  .upcard button { width:100%; font-size:12.5px; padding:6px 2px; }
+  #upPop { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(10,6,3,.72); z-index:5; border-radius:14px; }
+  #upPop .popcard { background:#2b1f12; border:1.5px solid #c9a35a; border-radius:12px; width:min(340px, 88%); padding:16px 18px; text-align:center; position:relative; }
+  #upPop .popicon { height:64px; display:flex; align-items:center; justify-content:center; font-size:44px; }
+  #upPop .popicon svg { width:60px; height:60px; }
+  #upPop h3 { margin:6px 0; color:#f3e9d2; font-size:18px; }
+  #upPop p { color:#cbbd97; font-size:13.5px; line-height:1.45; margin:0 0 8px; }
+  #upPop .popstatus { color:#ffd94a; font-size:13px; font-weight:bold; }
+  #upPopClose { position:absolute; top:6px; right:10px; background:none; border:none; color:#cbbd97; font-size:19px; cursor:pointer; padding:2px 6px; }
   #upgradesPanel { max-height:96%; overflow-y:auto; padding:14px 18px; }
   #upgradesPanel h2 { margin:0 0 2px; font-size:23px; }
   .panel h2 { color:#e8c87a; font-size:18px; margin-bottom:10px; }
@@ -108,6 +115,7 @@
     <h2>🔧 Night Market — Upgrades</h2>
     <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · <b id="upShards">0</b> ✦ · Unlocks are permanent; purchases apply from tomorrow. Sell ✦ special books to earn Star Shards.</p>
     <div class="upcards" id="upCards"></div>
+    <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
     <div class="row"><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
   </div>
 
@@ -1003,7 +1011,7 @@ const UPGRADES = [
 const upById = id => UPGRADES.find(u => u.id === id);
 function upState(u) {
   if (u.service) return marketingTonight ? 'done' : 'buy';
-  if (u.prereq && !boughtEver[u.prereq]) return 'locked';
+  if (u.prereq && !boughtEver[u.prereq]) return 'hidden';   // Roy: don't list it at all until the prerequisite is bought
   if (u.unlock > 0 && !unlocked[u.id]) return 'unlock';
   if (u.genre && casePlan.length >= 8) return 'noslot';
   if (u.repeatable) return casePlan.length >= 8 ? 'maxed' : 'buy';
@@ -1012,22 +1020,40 @@ function upState(u) {
 function renderUpgrades() {
   $('upCoins').textContent = coins;
   $('upShards').textContent = shards;
-  $('upCards').innerHTML = UPGRADES.map(u => {
+  $('upCards').innerHTML = UPGRADES.filter(u => upState(u) !== 'hidden').map(u => {
     const st = upState(u);
     let foot;
-    if (st === 'locked') foot = '<p class="locknote">🔒 Buy <b>' + upById(u.prereq).name + '</b> first to reveal this</p>';
-    else if (st === 'unlock') foot = '<button class="primary" data-act="unlock" data-up="' + u.id + '"' + (shards < u.unlock ? ' disabled' : '') + '>Unlock — ' + u.unlock + ' ✦</button>';
+    if (st === 'unlock') foot = '<button class="primary" data-act="unlock" data-up="' + u.id + '"' + (shards < u.unlock ? ' disabled' : '') + '>Unlock ' + u.unlock + ' ✦</button>';
     else if (st === 'owned') foot = '<button disabled>Owned ✓</button>';
-    else if (st === 'done') foot = '<button disabled>Running tonight ✓</button>';
-    else if (st === 'maxed') foot = '<button disabled>All 8 cases built ✓</button>';
-    else if (st === 'noslot') foot = '<p class="locknote">No floor space left for a new section</p>';
-    else foot = '<button class="primary" data-act="buy" data-up="' + u.id + '"' + (coins < u.cost ? ' disabled' : '') + '>' + u.cost + ' ' + COIN + '</button>';
-    const note = u.repeatable && upgrades.shelves ? '<p class="locknote">Owned ×' + upgrades.shelves + '</p>' : '';
-    return '<div class="upcard' + (st === 'locked' ? ' locked' : '') + (st === 'owned' || st === 'done' ? ' owned' : '') + '">' +
-      '<div class="icon">' + (u.svg || u.icon) + '</div><h3>' + u.name + '</h3><p>' + u.desc + '</p>' + note + foot + '</div>';
+    else if (st === 'done') foot = '<button disabled>Running ✓</button>';
+    else if (st === 'maxed') foot = '<button disabled>Full ✓</button>';
+    else if (st === 'noslot') foot = '<button disabled>No space</button>';
+    else foot = '<button class="primary" data-act="buy" data-up="' + u.id + '"' + (coins < u.cost ? ' disabled' : '') + '>Buy ' + u.cost + ' ' + COIN + '</button>';
+    const name = u.name + (u.repeatable && upgrades.shelves ? ' ×' + upgrades.shelves : '');
+    return '<div class="upcard' + (st === 'owned' || st === 'done' ? ' owned' : '') + '">' +
+      '<div class="icon" data-info="' + u.id + '">' + (u.svg || u.icon) + '</div><h3>' + name + '</h3>' + foot + '</div>';
   }).join('');
 }
+function showUpPop(id) {
+  const u = upById(id); if (!u) return;
+  const st = upState(u);
+  $('upPopIcon').innerHTML = u.svg || u.icon;
+  $('upPopName').textContent = u.name;
+  $('upPopDesc').innerHTML = u.desc;
+  $('upPopStatus').textContent =
+    st === 'owned' ? 'Owned ✓ — in effect from tomorrow' :
+    st === 'done' ? 'Running tonight ✓' :
+    st === 'unlock' ? 'Unlock for ' + u.unlock + ' ✦, then buy for ' + u.cost + ' coins' :
+    st === 'maxed' ? 'Your shop already has all 8 cases' :
+    st === 'noslot' ? 'No floor space left for a new section' :
+    (u.unlock > 0 ? 'Unlocked ✓ · Buy for ' + u.cost + ' coins' : 'Buy for ' + u.cost + ' coins');
+  $('upPop').style.display = 'flex';
+}
+$('upPopClose').addEventListener('click', () => { $('upPop').style.display = 'none'; });
+$('upPop').addEventListener('click', e => { if (e.target === $('upPop')) $('upPop').style.display = 'none'; });
 $('upCards').addEventListener('click', e => {
+  const info = e.target && e.target.closest ? e.target.closest('[data-info]') : null;
+  if (info) { showUpPop(info.dataset.info); return; }
   const btn = e.target && e.target.closest ? e.target.closest('button[data-up]') : null;
   if (!btn || btn.disabled) return;
   const u = upById(btn.dataset.up);
