@@ -981,12 +981,11 @@ function endDay() {
   refreshHUD();   // settle the HUD NOW — a last-second sale/purchase otherwise leaves it stale vs. the rent check
   if (haggle) closeHaggle('decline');
   $('hagglePanel').style.display = 'none';
-  // Roy (2026-10-17): books left at the checkout counter are restocked
-  // FIRST — they came off a shelf, so they get first claim on shelf space,
-  // ahead of whatever the player is carrying.
-  const pool = [];
+  // Roy (2026-10-17), final order: arm books restock first; books left at
+  // the checkout counter go LAST, but each still shelves if its genre has
+  // space, otherwise it takes an arm slot freed by the arm books shelving.
+  const pool = carry.slice();
   for (const c of customers) if (c.kind === 'buyer' && c.book && (c.state === 'toSell' || c.state === 'queueSell')) pool.push(c.book);
-  pool.push(...carry);
   carry = []; customers = [];
   for (const b of pool) {
     if (shelfStock[b.genre].length < capacityOf(b.genre)) shelfStock[b.genre].push(b);
