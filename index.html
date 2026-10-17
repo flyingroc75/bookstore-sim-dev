@@ -257,11 +257,20 @@ let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 // ---------- State ----------
 let coins, shelfStock, carry, customers, dayT, spawnT, running, over;
 let day = 1, dayStartCoins = 200;
-let reputation = 25;                 // ⭐ start ~25; −1 per declined sale / patience walkout
+let reputation = 25;                 // ⭐ start ~25; −1 per declined sale / patience walkout; +1 at a 10% chance per happy customer (Roy, 2026-10-17)
 function repDown() {
   reputation = Math.max(0, reputation - 1);
   refreshHUD();
   if (reputation <= 0 && running && !over) gameOverRep();
+}
+// Roy (2026-10-17): no more daily +1 — instead each successfully served
+// customer has a 10% chance to bump reputation, with a boop and a smiley.
+let floaters = [];   // little rising emoji (😊 on a rep bump)
+function happyCustomer(c) {
+  if (Math.random() >= 0.10) return;
+  reputation = Math.min(100, reputation + 1);
+  refreshHUD(); sfx('boop');
+  if (c) floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' });
 }
 function gameOverRep() {
   over = true; running = false; haggle = null;
@@ -373,6 +382,11 @@ function openCollections(cut) {
   }
   renderCollections(cut ? cut.title : null, banner);
   $('colPanel').style.display = 'block'; colOpen = true;
+  if (cut) {   // Roy (2026-10-17): the album is long — glide to the book just bought
+    const grid = $('colGrid');
+    const tile = grid && grid.querySelector ? grid.querySelector('.justgot') : null;
+    if (tile && tile.scrollIntoView) setTimeout(() => { try { tile.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 60);
+  }
 }
 
 function rnd(a, b) { return Math.floor(a + Math.random() * (b - a + 1)); }
@@ -596,7 +610,7 @@ function doInteract() {
     const before = carry.length;
     let moved = 0;
     carry = carry.filter(bk => { if (bk.genre === g && shelfStock[g].length < capacityOf(g)) { shelfStock[g].push(bk); moved++; return false; } return true; });
-    if (moved) flash('Stocked ' + GENRE_NAME[g]);
+    if (moved) { flash('Stocked ' + GENRE_NAME[g]); sfx('thunk'); }
     else if (before) flash(GENRE_NAME[g] + ' shelf is full!');
   }
 }
@@ -609,6 +623,7 @@ function sellToBuyer(b) {
   b.book = null;              // sold books leave with the buyer — for good
   b.state = 'leaveHappy';
   sfx('sale');
+  happyCustomer(b);
   refreshHUD();
 }
 
@@ -645,7 +660,7 @@ function syncOffer() {
 $('offerSlider').addEventListener('input', syncOffer);
 function closeHaggle(result) {
   const s = haggle.seller;
-  if (result === 'deal') { s.state = 'leaveHappy'; const cut = noteCollectionPurchase(s.book); if (cut) pendingColCut = cut; }
+  if (result === 'deal') { s.state = 'leaveHappy'; const cut = noteCollectionPurchase(s.book); if (cut) { pendingColCut = cut; sfx(cut.award ? 'fanfare' : 'tadah'); } happyCustomer(s); }
   else if (result === 'dismiss') { s.state = 'toBuy'; }   // back out, no penalty: seller keeps waiting at the buy counter
   else if (result === 'decline') { if (haggle.dealt) s.state = 'leaveHappy'; else { s.state = 'leaveMad'; stats.turnedAway++; } }
   haggle = null;
@@ -752,6 +767,10 @@ function sfx(kind) {
   if (kind === 'sale') { pluck(1318.5, t, 0.24, 0.02, 'triangle'); pluck(1568.0, t + 0.07, 0.3, 0.017, 'triangle'); }
   else if (kind === 'buy') { pluck(392.0, t, 0.22, 0.045); pluck(329.6, t + 0.06, 0.26, 0.04); }
   else if (kind === 'err') { pluck(196.0, t, 0.16, 0.04, 'square'); pluck(174.6, t + 0.09, 0.22, 0.035, 'square'); }
+  else if (kind === 'boop') { pluck(739.99, t, 0.1, 0.035, 'sine'); pluck(1174.66, t + 0.06, 0.16, 0.035, 'sine'); }   // happy rep bump (Roy)
+  else if (kind === 'thunk') { pluck(131.0, t, 0.09, 0.085, 'sine'); pluck(87.0, t + 0.01, 0.13, 0.07, 'triangle'); }   // a book thunked onto the shelf (Roy)
+  else if (kind === 'tadah') { pluck(523.25, t, 0.16, 0.04); pluck(659.25, t + 0.07, 0.16, 0.04); pluck(783.99, t + 0.14, 0.2, 0.045); pluck(1046.5, t + 0.21, 0.34, 0.045); }   // collectible bought: ta-dah! (Roy)
+  else if (kind === 'fanfare') { pluck(523.25, t, 0.16, 0.04); pluck(659.25, t + 0.07, 0.16, 0.04); pluck(783.99, t + 0.14, 0.2, 0.045); pluck(1046.5, t + 0.21, 0.3, 0.05); pluck(1318.5, t + 0.3, 0.42, 0.04); pluck(1567.98, t + 0.38, 0.5, 0.035); }   // collection COMPLETE
 }
 $('musicBtn').addEventListener('click', () => {
   Music.on = !Music.on;
@@ -893,6 +912,7 @@ function update(dt) {
   $('actionBtn').style.display = canAct ? 'block' : 'none';
   $('actionBtn').textContent = st === 'buy' ? 'Haggle' : st === 'sell' ? 'Ring up' : 'Stock books';
   if (flashT > 0) flashT -= dt;
+  for (const f of floaters) f.t += dt; floaters = floaters.filter(f => f.t < 1.1);
 
   refreshHUD();
 }
@@ -925,7 +945,6 @@ function startNextDay() {
   day++;
   marketingActive = marketingTonight;   // capture before applyUpgrades clears it
   applyUpgrades();
-  reputation++;                        // +1 every day, regardless (Roy)
   customers = []; dayT = 0; spawnT = 1.2; over = false; haggle = null;
   stats = freshStats();
   dayStartCoins = coins;
@@ -1400,13 +1419,21 @@ function drawOutside() {
   ctx.fillStyle = '#f3e9d2';
   ctx.beginPath(); ctx.moveTo(138, 556); ctx.lineTo(162, 556); ctx.lineTo(166, 586); ctx.lineTo(134, 586); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = '#5a4326'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.font = '15px serif'; ctx.textAlign = 'center'; ctx.fillText('📚', 150, 577);
-  // chalk arrows on the pavement, pointing at the door
-  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // painted open-book glyph on the board (Roy, 2026-10-17: the old emoji
+  // stamp + scrawled text clashed with the shop's painted-wood theme)
+  ctx.fillStyle = '#fff6df'; ctx.strokeStyle = '#5a4326'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(150, 562); ctx.bezierCurveTo(145, 559, 140, 559, 137, 560.5); ctx.lineTo(137, 570); ctx.bezierCurveTo(140, 568.5, 145, 568.5, 150, 571); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(150, 562); ctx.bezierCurveTo(155, 559, 160, 559, 163, 560.5); ctx.lineTo(163, 570); ctx.bezierCurveTo(160, 568.5, 155, 568.5, 150, 571); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(90,67,38,.55)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(140, 563.5); ctx.lineTo(147, 562.5); ctx.moveTo(140, 566.5); ctx.lineTo(147, 565.5); ctx.moveTo(153, 562.5); ctx.lineTo(160, 563.5); ctx.moveTo(153, 565.5); ctx.lineTo(160, 566.5); ctx.stroke();
+  ctx.font = 'bold 8.5px Georgia'; ctx.textAlign = 'center'; ctx.fillStyle = '#5a4326'; ctx.fillText('B O O K S', 150, 582);
+  // chalk arrows on the pavement, pointing at the door — dusty, hand-drawn double strokes
+  ctx.strokeStyle = 'rgba(240,230,205,.45)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
   for (const [ax, ay] of [[300, 570], [398, 583], [486, 566]]) {
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 36, ay); ctx.moveTo(ax - 26, ay - 6); ctx.lineTo(ax - 37, ay); ctx.lineTo(ax - 26, ay + 6); ctx.stroke();
+    for (const j of [[0, 0], [1.2, 0.9]]) {
+      ctx.beginPath(); ctx.moveTo(ax + j[0], ay + j[1]); ctx.lineTo(ax - 34 + j[0], ay + j[1]); ctx.moveTo(ax - 25 + j[0], ay - 5 + j[1]); ctx.lineTo(ax - 35 + j[0], ay + j[1]); ctx.lineTo(ax - 25 + j[0], ay + 5 + j[1]); ctx.stroke();
+    }
   }
-  ctx.font = '13px Georgia'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText('books!', 246, 588);
   ctx.lineWidth = 1;
 }
 
@@ -1526,6 +1553,7 @@ function draw() {
   carry.forEach((b, i) => drawBook(player.x - 16 + i * 11, player.y - 60, b.genre, b.special, 0.7));
   // flash
   if (flashT > 0) { ctx.fillStyle = '#ffd98a'; ctx.font = 'bold 22px Georgia'; ctx.textAlign = 'center'; ctx.fillText(flashTxt.split('🪙').join('●'), W / 2, 150); }
+  for (const f of floaters) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1); ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText(f.txt, f.x, f.y - f.t * 26); ctx.restore(); }
   // opening-sequence coin drain: a stream of coins flying to the landlord…
   for (const p of coinParticles) {
     ctx.fillStyle = '#d4af37'; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); ctx.fill();
