@@ -206,6 +206,7 @@ let SHELF_TIERS = 2;                 // tiers per bookcase
 function freshUpgrades() { return { supplier: false, reliable: false, appraisal: false, bookcase: false, bookcase2: false, speed: false, speed2: false, cat: false, cat2: false, chair: false, checker: false, checker2: false, poetry: false, comics: false, shelves: 0 }; }
 let upgrades = freshUpgrades();
 let marketingTonight = false;
+let marketingActive = false;   // marketing bought last night → the sign + chalk marks are out front today
 // Floor plan per Roy's sketch (2026-10-16): bookcases in the two TOP CORNERS,
 // counters along the bottom, door at the bottom-left. Room for SIX more
 // bookshelves after these two: two more on the back wall, four as islands.
@@ -360,6 +361,7 @@ function reset() {
   for (const g of new Set(casePlan)) if (g !== 'green' && g !== 'purple') upgrades[g] = true;
   if (keptCats) { upgrades.cat = !!keptCats.cat; upgrades.cat2 = !!keptCats.cat2 && upgrades.cat; }   // the cat stays with the shop; the supplier does NOT — restock reverts to the Mysterious Man until re-bought
   upgrades.shelves = Math.max(0, casePlan.length - new Set(casePlan).size);
+  marketingActive = false;
   applyUpgrades();
   // Every kept shelf starts stocked with books worth 25 (flat, like the
   // original opening stock): each genre filled to its case capacity.
@@ -805,6 +807,7 @@ function applyUpgrades() {
 }
 function startNextDay() {
   day++;
+  marketingActive = marketingTonight;   // capture before applyUpgrades clears it
   applyUpgrades();
   reputation++;                        // +1 every day, regardless (Roy)
   customers = []; dayT = 0; spawnT = 1.2; over = false; haggle = null;
@@ -1260,6 +1263,35 @@ const SPINE_SHADES = {
   poetry: ['#c96a1e', '#e08a3c', '#eda45c', '#b85c14', '#e59a4a', '#a34e10'],
   comics: ['#1f9e8a', '#3cc4b0', '#5fd0bf', '#178a76', '#45bfa9', '#15705f']
 };
+// A bit of the outside (Roy, 2026-10-16): sidewalk + a sliver of street
+// along the bottom frontage. When marketing is on (bought last night), the
+// sandwich-board sign and chalk arrows from its card text appear out front.
+function drawOutside() {
+  ctx.fillStyle = '#3a2c1e'; ctx.fillRect(0, 544, W, 6);                    // storefront step
+  ctx.fillStyle = '#7d766b'; ctx.fillRect(0, 550, W, 42);                   // sidewalk
+  ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 2;
+  for (let x = 45; x < W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 550); ctx.lineTo(x, 592); ctx.stroke(); }
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#8d8578'; ctx.fillRect(0, 592, W, 3);                    // curb
+  ctx.fillStyle = '#3c3835'; ctx.fillRect(0, 595, W, 5);                    // street
+  if (!marketingActive) return;
+  // sandwich-board sign by the door
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(150, 590, 22, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#5a4326'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(143, 558); ctx.lineTo(136, 588); ctx.moveTo(157, 558); ctx.lineTo(164, 588); ctx.stroke();
+  ctx.fillStyle = '#f3e9d2';
+  ctx.beginPath(); ctx.moveTo(138, 556); ctx.lineTo(162, 556); ctx.lineTo(166, 586); ctx.lineTo(134, 586); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#5a4326'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.font = '15px serif'; ctx.textAlign = 'center'; ctx.fillText('📚', 150, 577);
+  // chalk arrows on the pavement, pointing at the door
+  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const [ax, ay] of [[300, 570], [398, 583], [486, 566]]) {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 36, ay); ctx.moveTo(ax - 26, ay - 6); ctx.lineTo(ax - 37, ay); ctx.lineTo(ax - 26, ay + 6); ctx.stroke();
+  }
+  ctx.font = '13px Georgia'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText('books!', 246, 588);
+  ctx.lineWidth = 1;
+}
+
 function draw() {
   ctx.clearRect(0, 0, W, H);
   // wall (upper) + floor (lower)
@@ -1269,6 +1301,7 @@ function draw() {
   ctx.strokeStyle = 'rgba(0,0,0,.10)';
   for (let y = 168; y < H; y += 26) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   for (let x = 30; x < W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 148); ctx.lineTo(x, H); ctx.stroke(); }
+  drawOutside();
   // rug between the counters
   ctx.fillStyle = '#74343a'; ctx.fillRect(402, 378, 156, 58);
   ctx.strokeStyle = '#c9a35a'; ctx.lineWidth = 3; ctx.strokeRect(409, 385, 142, 44); ctx.lineWidth = 1;
