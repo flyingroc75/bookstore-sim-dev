@@ -98,6 +98,7 @@
     <div class="row" id="haggleButtons">
       <button class="primary" id="offerBtn">Make offer</button>
       <button id="declineBtn">Decline</button>
+      <button id="dismissBtn">Later</button>
     </div>
     <p id="haggleMsg" style="color:#ffd98a; min-height:18px;"></p>
     <div id="haggleReveal"></div>
@@ -498,6 +499,7 @@ $('offerSlider').addEventListener('input', syncOffer);
 function closeHaggle(result) {
   const s = haggle.seller;
   if (result === 'deal') { s.state = 'leaveHappy'; }
+  else if (result === 'dismiss') { s.state = 'toBuy'; }   // back out, no penalty: seller keeps waiting at the buy counter
   else if (result === 'decline') { if (haggle.dealt) s.state = 'leaveHappy'; else { s.state = 'leaveMad'; stats.turnedAway++; } }
   haggle = null;
   $('hagglePanel').style.display = 'none';
@@ -523,6 +525,7 @@ $('offerBtn').addEventListener('click', () => {
   }
 });
 $('declineBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) repDown(); if (haggle) closeHaggle('decline'); });
+$('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) closeHaggle('dismiss'); });
 
 // After a deal: the haggle panel greys out under an overlay card revealing the
 // book's ACTUAL sale value (count-up), with a Continue button to dismiss it.
