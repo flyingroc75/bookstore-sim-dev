@@ -292,7 +292,7 @@ function happyCustomer(c) {
   if (Math.random() >= 0.10) return;
   reputation = Math.min(100, reputation + 1);
   refreshHUD(); sfx('boop'); hudPop('repBox', 'hudgood');
-  if (c) { floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' }); floaters.push({ x: c.x + 16, y: c.y - 62, t: 0, txt: '⭐+1', gold: true }); bursts.push(makeBurst(c.x, c.y - 30, '#7dd87d', '✚')); }
+  if (c) { floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' }); floaters.push({ x: c.x + 16, y: c.y - 62, t: 0, txt: '⬆+1', good: true }); bursts.push(makeBurst(c.x, c.y - 30, '#7dd87d', '✚')); }
 }
 // ---------- Drama pass (Roy, 2026-10-17): shard gains and rep swings
 // should FEEL like events — flying shards, bursts, glows, HUD pops, shake.
@@ -322,7 +322,7 @@ function celebrateShards(n, x, y) {
 function repDownFX(c) {
   redGlowT = 0.5; hudPop('repBox', 'hudbad');
   const w = $('wrap'); if (w && w.classList) { w.classList.remove('screenshake'); void w.offsetWidth; w.classList.add('screenshake'); setTimeout(() => { try { w.classList.remove('screenshake'); } catch (e) {} }, 350); }
-  if (c) { floaters.push({ x: c.x, y: c.y - 62, t: 0, txt: '⭐−1', bad: true }); bursts.push(makeBurst(c.x, c.y - 30, '#e06868', '✚')); }
+  if (c) { floaters.push({ x: c.x, y: c.y - 62, t: 0, txt: '⬇−1', bad: true }); bursts.push(makeBurst(c.x, c.y - 30, '#e06868', '✚')); }
 }
 function gameOverRep() {
   over = true; running = false; haggle = null;
@@ -1666,7 +1666,7 @@ function draw() {
   carry.forEach((b, i) => drawBook(player.x - 16 + i * 11, player.y - 60, b.genre, b.special, 0.7));
   // flash
   if (flashT > 0) { ctx.fillStyle = '#ffd98a'; ctx.font = 'bold 22px Georgia'; ctx.textAlign = 'center'; ctx.fillText(flashTxt.split('🪙').join('●'), W / 2, 150); }
-  for (const f of floaters) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1); ctx.font = f.gold || f.bad ? 'bold 16px Georgia' : '20px serif'; if (f.gold) ctx.fillStyle = '#ffd94a'; if (f.bad) ctx.fillStyle = '#ff9a9a'; ctx.textAlign = 'center'; ctx.fillText(f.txt, f.x, f.y - f.t * 26); ctx.restore(); }
+  for (const f of floaters) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1); ctx.font = f.gold || f.good || f.bad ? 'bold 16px Georgia' : '20px serif'; if (f.gold) ctx.fillStyle = '#ffd94a'; if (f.good) ctx.fillStyle = '#7dd87d'; if (f.bad) ctx.fillStyle = '#ff8080'; ctx.textAlign = 'center'; ctx.fillText(f.txt, f.x, f.y - f.t * 26); ctx.restore(); }
   for (const fl of shardFlights) {
     if (fl.t < 0 || fl.t > 1) continue;
     const t = fl.t, cx = (fl.x0 + fl.x1) / 2, cy = Math.min(fl.y0, fl.y1) - 130;
