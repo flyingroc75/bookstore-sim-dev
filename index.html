@@ -428,7 +428,7 @@ function renderCollections(highlightTitle, banner) {
     html += '<div class="colsec">' + (c.genre === 'purple' ? '🟣' : '🟢') + ' ' + c.name + ' — ' + got + '/' + c.books.length + (collectionsDone[c.id] ? ' ✓ +' + collectionAward(c) + '✦' : ' · complete it for +' + collectionAward(c) + '✦') + '</div><div class="coltiles">';
     for (const [title, icon] of c.books) {
       const owned = !!collected[title];
-      html += '<div class="coltile' + (owned ? '' : ' miss') + (title === highlightTitle ? ' justgot' : '') + '"><span class="ic">' + icon + '</span><span class="tt">' + title + '</span></div>';
+      html += '<div class="coltile' + (owned ? '' : ' miss') + (title === highlightTitle ? ' justgot' : '') + '"><span class="ic">' + icon + '</span><span class="tt">' + (owned ? title : '???') + '</span></div>';   // uncollected titles stay secret until the book is received (Roy, 2026-10-17)
     }
     html += '</div>';
   }
