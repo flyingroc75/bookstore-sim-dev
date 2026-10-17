@@ -830,7 +830,7 @@ function endDay() {
     const spaces = emptySlots + ' empty space' + (emptySlots === 1 ? '' : 's');
     $('restockBody').innerHTML = bySupplier
       ? '<b>' + (upgrades.reliable ? 'RELIABLE SUPPLIER' : 'SLEAZY SUPPLIER') + ':</b> “Psst, friend. Gaps on the shelves — <b>' + spaces + '</b>. I fill every one tonight: <b>' + pendingRestock.perBook + '</b> ' + COIN + ' a book, and they sell for <b>25</b>. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”'
-      : '<b>MYSTERIOUS MAN:</b> “Psst. Shelves are looking bare — <b>' + spaces + '</b>. I’ll fill every one tonight: <b>30</b> ' + COIN + ' a book, and they sell for <b>25</b>. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”';
+      : '<b>MYSTERIOUS MAN:</b> “Psst. Shelves are looking bare — <b>' + spaces + '</b>. I’ll fill every one tonight: <b>30</b> ' + COIN + ' a book. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”';   // Roy: he names only your cost, never the books' sell price — the trap stays hidden
     $('restockYes').textContent = coins >= pendingRestock.total ? 'Deal — pay ' + pendingRestock.total : 'You can\'t afford ' + pendingRestock.total;
     $('restockYes').disabled = coins < pendingRestock.total;
     showClosing(() => { $('restockPanel').style.display = 'block'; });
