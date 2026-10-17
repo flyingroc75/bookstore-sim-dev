@@ -232,8 +232,8 @@ const RESERVED_SLOTS = [
   { x: 456, y: 40,  w: 108, h: 116 }, { x: 596, y: 40,  w: 108, h: 116 },
   { x: 316, y: 246, w: 108, h: 116 }, { x: 596, y: 246, w: 108, h: 116 }
 ];
-const BUY_COUNTER  = { x: 90,  y: 452, w: 300, h: 52 };
-const SELL_COUNTER = { x: 570, y: 452, w: 300, h: 52 };
+const BUY_COUNTER  = { x: 90,  y: 420, w: 300, h: 52 };   // moved up a bit (Roy, 2026-10-16) so the counters clear the door
+const SELL_COUNTER = { x: 570, y: 420, w: 300, h: 52 };
 const DOOR = { x: 84, y: 534 };   // the threshold: just inside the storefront, ABOVE the pavement (Roy, 2026-10-16). People spawn outside (below the canvas) and come in through it.
 let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 
@@ -1308,8 +1308,8 @@ function draw() {
   for (let x = 30; x < W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 148); ctx.lineTo(x, H); ctx.stroke(); }
   drawOutside();
   // rug between the counters
-  ctx.fillStyle = '#74343a'; ctx.fillRect(402, 378, 156, 58);
-  ctx.strokeStyle = '#c9a35a'; ctx.lineWidth = 3; ctx.strokeRect(409, 385, 142, 44); ctx.lineWidth = 1;
+  ctx.fillStyle = '#74343a'; ctx.fillRect(402, 346, 156, 58);
+  ctx.strokeStyle = '#c9a35a'; ctx.lineWidth = 3; ctx.strokeRect(409, 353, 142, 44); ctx.lineWidth = 1;
   // (Space for six more bookshelves is kept free in the layout but not drawn.)
   // cats roam behind the furniture; the Comfy Chair sits mid-floor
   for (const cat of cats) drawCat(cat);
@@ -1381,7 +1381,7 @@ function draw() {
   ctx.fillStyle = '#2e2115'; ctx.fillRect(DOOR.x - 32, DOOR.y - 16, 64, 32);
   ctx.fillStyle = '#17100a'; ctx.fillRect(DOOR.x - 32, DOOR.y - 16, 64, 5);
   ctx.fillStyle = '#c9b18c'; ctx.fillRect(DOOR.x - 32, DOOR.y + 11, 64, 3);
-  ctx.font = '12px Georgia'; ctx.textAlign = 'center'; ctx.fillText('DOOR', DOOR.x, DOOR.y - 24);
+  // (no label — Roy, 2026-10-16: the door needs no sign)
   // customers
   for (const c of customers) {
     drawCustomer(c);
