@@ -44,6 +44,14 @@
   #upgradesPanel { max-height:96%; overflow:hidden; padding:14px 18px; flex-direction:column; }
   #upgradesPanel h2 { margin:0 0 2px; font-size:23px; }
   #upScroll { overflow-y:auto; min-height:0; }
+  .colsec { margin:10px 0 4px; font-size:14px; color:#e8c87a; }
+  .coltiles { display:flex; flex-wrap:wrap; gap:6px; }
+  .coltile { width:86px; padding:7px 4px 5px; background:#2e2115; border:1px solid #5a4326; border-radius:8px; text-align:center; }
+  .coltile .ic { font-size:26px; display:block; }
+  .coltile .tt { font-size:9.5px; line-height:1.25; color:#d8c9a8; display:block; margin-top:3px; }
+  .coltile.miss .ic { filter:grayscale(1); opacity:.3; }
+  .coltile.miss .tt { color:#8a7c60; }
+  .coltile.justgot { border-color:#ffd94a; box-shadow:0 0 12px #ffd94a; }
   .uphead { background:#241a10; margin:-14px -18px 6px; padding:14px 18px 8px; border-bottom:1px solid #8a6d3f; flex:none; }
   .uphead .titlerow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .uphead h2 { margin:0; }
@@ -104,6 +112,7 @@
   <span>⏳ <b id="clock">3:30</b></span>
   <span><b id="repFace">😐</b> <b id="rep">25</b></span>
   <span><button id="musicBtn" style="padding:4px 10px; font-size:13px;">🔊 Music on</button></span>
+  <span><button id="colBtn" style="padding:4px 10px; font-size:13px;">📚 <b id="colCount">0/100</b></button></span>
   <span id="buildTag" style="opacity:.55; font-size:11px;"></span>
 </div>
 <div id="wrap">
@@ -165,6 +174,13 @@
     <h2>🔄 The cycle continues</h2>
     <p>Somewhere, a well-meaning soul is about to have a very educational week.</p>
     <div class="row"><button class="primary" id="startOverBtn">Start over</button></div>
+  </div>
+
+  <div class="panel" id="colPanel" style="display:none;">
+    <h2 style="margin-bottom:2px;">📚 Collections <span id="colHeadCount" style="font-size:14px; color:#e8c87a;"></span></h2>
+    <p id="colBanner" style="color:#ffd98a; min-height:18px; margin:2px 0 4px;"></p>
+    <div id="colGrid" style="overflow-y:auto; max-height:58vh; text-align:left; padding-right:4px;"></div>
+    <div class="row"><button class="primary" id="colClose">Back to the shop</button></div>
   </div>
 
   <div class="panel" id="tallyPanel">
@@ -257,17 +273,108 @@ let stats, haggle; // haggle = { seller, offer }
 let startNetWorth = 0;
 let player;
 
-function makeBook(genre, special) {
+function makeBook(genre, special, titled) {
   // 'value' is the book's true sell price — fixed per book, but HIDDEN from the
   // player, who only ever sees an appraisal range around it.
   const bv = BOOK_VALUES[genre] || BOOK_VALUES.green;
   const value = special ? rnd(bv.s[0], bv.s[1]) : rnd(bv.n[0], bv.n[1]);
-  return { genre, special: !!special, value, sellPrice: value, cost: 0 };   // cost = what we paid (0 for opening stock)
+  const b = { genre, special: !!special, value, sellPrice: value, cost: 0, title: null, col: null };   // cost = what we paid (0 for opening stock)
+  if (titled && Math.random() < 0.3) { const pick = pickCollectionBook(genre); if (pick) { b.title = pick.title; b.col = pick.col; } }   // ~30% of seller books are collectible titles
+  return b;
 }
 function appraisalRange(book) {
   const spread = (book.special ? 0.45 : 0.35) * (upgrades.appraisal ? 0.5 : 1);   // appraisal course halves it
   return [Math.max(1, Math.round(book.value * (1 - spread))), Math.round(book.value * (1 + spread))];
 }
+// ---------- Collections (Roy, 2026-10-16) ----------
+// 100 collectible books in themed sets of 2-5: 50 fiction (purple), 50
+// non-fiction (green). Sellers sometimes carry them; BUYING one un-grays
+// its icon on the collection screen, and completing a set awards Star
+// Shards: 1 for a 2-3 book set, 2 for a 4-5 book set. The full catalog
+// also lives in collections.md for review.
+const COLLECTIONS = [
+  { id: 'cats-clothes', name: 'Cats in Clothes', genre: 'purple', books: [['Puss in Boots','🥾'],['Kittens in Mittens','🧤'],['The Cat in the Hat','🎩'],['A Tiger in a Tutu','🩰'],['Sir Whiskers in Velvet','🧥']] },
+  { id: 'dragons-badly', name: 'Dragons Behaving Badly', genre: 'purple', books: [['The Dragon Who Hoarded Socks','🧦'],["A Dragon's Guide to Arson (Don't)",'🔥'],['The Vegetarian Dragon','🥦'],["Dragons Can't Swim",'🏊'],["The Last Dragon's Dentist",'🦷']] },
+  { id: 'moon-missions', name: 'Moon Missions', genre: 'purple', books: [['The Accidental Astronaut','🚀'],['Moonbase Catastrophe','🌕'],['One Small Step for Ham','🐹'],["The Mars Rover's Diary",'🤖'],['Gravity Is Optional','🪐']] },
+  { id: 'pirates-pantry', name: 'Pirates of the Pantry', genre: 'purple', books: [['Captain Crumbbeard','🏴‍☠️'],['The Pickle Mutiny','🥒'],['Treasure Map in the Freezer','🗺️'],['The Soup Spoon Armada','🥄']] },
+  { id: 'haunted-houses', name: 'Haunted Houses', genre: 'purple', books: [['The House That Hummed','🏚️'],["Ghosts Don't Pay Rent",'👻'],['The Attic Tenant','🕯️'],['A Very Polite Haunting','🫖']] },
+  { id: 'robots-feelings', name: 'Robots with Feelings', genre: 'purple', books: [['The Toaster Who Loved','💌'],['My Robot Wrote a Poem','📝'],['Batteries Not Included, Feelings Are','🔋'],["The Vacuum's Existential Crisis",'🌀']] },
+  { id: 'witch-cookbook', name: "Witches' Cookbook Tales", genre: 'purple', books: [['Eye of Newt, Hold the Newt','👁️'],['The Cauldron Cookbook','🍲'],['Baking with Broomsticks','🧹']] },
+  { id: 'knights-neigh', name: 'Knights Who Say Neigh', genre: 'purple', books: [['Sir Gallopsalot','🐎'],['The Jousting Tournament Mix-Up','⚔️'],["A Knight's Tale of Hay",'🌾']] },
+  { id: 'mermaid-post', name: 'Mermaid Postal Service', genre: 'purple', books: [['Letters from the Deep','✉️'],['The Bottled Post','🍾'],['Special Delivery to Atlantis','🐚']] },
+  { id: 'vampire-veg', name: 'Vampire Vegetarians', genre: 'purple', books: [['Count Broccula','🧛'],['Garlic Is a Food Group','🧄']] },
+  { id: 'clockwork-zoo', name: 'The Clockwork Zoo', genre: 'purple', books: [['The Mechanical Elephant','🐘'],['Wind-Up Whale Songs','🐋']] },
+  { id: 'goblin-bookclub', name: "Goblins' Book Club", genre: 'purple', books: [['Goblins Read the Classics','📖'],['The Book Club Schism','💥']] },
+  { id: 'time-grandmas', name: 'Time-Traveling Grandmas', genre: 'purple', books: [['Nana vs. the Dinosaurs','🦖'],['Bingo Night in Ancient Rome','🏛️']] },
+  { id: 'sock-gnomes', name: 'Sock Gnome Mysteries', genre: 'purple', books: [['The Case of the Missing Left Sock','🔍'],['Gnomes of the Laundry Room','🫧']] },
+  { id: 'bears-boats', name: 'Bears in Boats', genre: 'purple', books: [['The Bear Who Rowed to Breakfast','⛵'],["Grizzly's Guide to Knots Afloat",'🪢']] },
+  { id: 'last-lighthouse', name: 'The Last Lighthouse', genre: 'purple', books: [['Keeper of the Last Light','🔦'],['Storm over Gull Rock','🌊']] },
+  { id: 'backyard-birds', name: 'Backyard Birds', genre: 'green', books: [['Warblers of the Wetlands','🐦'],['The Crow Who Knows You','🐦‍⬛'],['Hummingbirds at Home','🌺'],['Owls After Dark','🦉'],['The Backyard Bird Census','📋']] },
+  { id: 'mushroom-hunting', name: 'Mushroom Hunting Safely', genre: 'green', books: [['Know Your Amanitas','🍄'],["The Forager's Field Notebook",'🎒'],['Edible? A Flowchart','🌲'],['Fungi of the Forest Floor','🍂'],['Spore Prints & Sketches','🎨']] },
+  { id: 'sourdough', name: 'Sourdough Science', genre: 'green', books: [['The Starter Diaries','🫙'],['Crumb Structure 101','🍞'],['Fermentation for the Impatient','⏱️'],['The Perfect Crust','🔬']] },
+  { id: 'volcanoes', name: 'Volcanoes!', genre: 'green', books: [['Anatomy of an Eruption','🌋'],['The Ring of Fire','🧭'],['Pompeii, Preserved','🏺'],['How to Read a Lava Flow','🪨']] },
+  { id: 'beekeeping', name: 'Beekeeping for Beginners', genre: 'green', books: [['Your First Hive','🐝'],['The Queen & Her Court','👑'],['Honey Harvest Day','🍯'],['Bees Are Not Pets (Yes They Are)','🌼']] },
+  { id: 'cast-iron', name: 'Cast Iron Cooking', genre: 'green', books: [['Seasoning Secrets','🍳'],['One Pan, Every Dinner','🥘'],['The Dutch Oven Diaries','👨‍🍳'],['Rust Rescue & Care','🛠️']] },
+  { id: 'night-sky', name: 'The Night Sky', genre: 'green', books: [['Constellations for Insomniacs','✨'],['The Messier Marathon','🔭'],['Shooting Stars & Satellites','🛰️'],['Your First Telescope','🌌']] },
+  { id: 'knot-tying', name: 'Knot Tying for Landlubbers', genre: 'green', books: [['Twenty Knots Worth Knowing','🧶'],['Knots for Sailors','⚓'],['The Bowline & Other Friends','🐇']] },
+  { id: 'goldfish', name: 'Train Your Goldfish', genre: 'green', books: [['Yes, They Remember','🐠'],['Hoop Dreams: Goldfish Edition','🏀'],['The Psychology of the Bowl','🔮']] },
+  { id: 'maps-compasses', name: 'Maps & Compasses', genre: 'green', books: [['Reading the Land','🗾'],['Lost & Found: Navigation Stories','🧭'],["Cartographers' Secrets",'📐']] },
+  { id: 'houseplants', name: 'Houseplant Rescues', genre: 'green', books: [['The Fern Hospital','🌿'],['Water Less, Love More','💧'],['Propagation Nation','🌱']] },
+  { id: 'chess', name: 'Chess Openings', genre: 'green', books: [['The Italian Game','♟️'],['Gambits & Coffee','☕']] },
+  { id: 'fermentation', name: 'Fermentation Fun', genre: 'green', books: [['Pickle Everything','🥬'],['The Kimchi Diaries','🌶️']] },
+  { id: 'whales', name: 'Whales of the Salish Sea', genre: 'green', books: [['Orca Matrilines','🐳'],["The Humpback's Song",'🎵']] },
+  { id: 'rock-collecting', name: 'Rock Collecting', genre: 'green', books: [['Agates of the Coast','💎'],['Fossils in Your Backyard','🦴']] },
+];
+const colById = id => COLLECTIONS.find(c => c.id === id);
+const collectionAward = c => c.books.length <= 3 ? 1 : 2;
+function pickCollectionBook(genre) {
+  const pool = [];
+  for (const c of COLLECTIONS) if (c.genre === genre) for (const [title] of c.books) pool.push({ title, col: c.id });
+  if (!pool.length) return null;
+  const unowned = pool.filter(b => !collected[b.title]);
+  const src = (unowned.length && Math.random() < 0.8) ? unowned : pool;
+  return src[Math.floor(Math.random() * src.length)];
+}
+let pendingColCut = null;   // set on a first-time collection purchase; the collection screen opens right after the reveal
+function noteCollectionPurchase(book) {
+  if (!book || !book.col || collected[book.title]) return null;
+  collected[book.title] = true;
+  const c = colById(book.col);
+  let award = 0;
+  if (c && c.books.every(([t]) => collected[t]) && !collectionsDone[c.id]) {
+    collectionsDone[c.id] = true;
+    award = collectionAward(c);
+    shards += award;
+  }
+  saveMeta(); updateColCount();
+  return { colId: book.col, title: book.title, award };
+}
+function updateColCount() { const n = Object.keys(collected).length; const el = $('colCount'); if (el) el.textContent = n + '/100'; const h = $('colHeadCount'); if (h) h.textContent = '— ' + n + '/100'; }
+function renderCollections(highlightTitle, banner) {
+  $('colBanner').textContent = banner || '';
+  let html = '';
+  for (const c of COLLECTIONS) {
+    const got = c.books.filter(([t]) => collected[t]).length;
+    html += '<div class="colsec">' + (c.genre === 'purple' ? '🟣' : '🟢') + ' ' + c.name + ' — ' + got + '/' + c.books.length + (collectionsDone[c.id] ? ' ✓ +' + collectionAward(c) + '✦' : ' · complete it for +' + collectionAward(c) + '✦') + '</div><div class="coltiles">';
+    for (const [title, icon] of c.books) {
+      const owned = !!collected[title];
+      html += '<div class="coltile' + (owned ? '' : ' miss') + (title === highlightTitle ? ' justgot' : '') + '"><span class="ic">' + icon + '</span><span class="tt">' + title + '</span></div>';
+    }
+    html += '</div>';
+  }
+  $('colGrid').innerHTML = html;
+}
+let colOpen = false;
+function openCollections(cut) {
+  let banner = '';
+  if (cut) {
+    const c = colById(cut.colId);
+    banner = '📚 New for your collection: “' + cut.title + '” (' + (c ? c.name : '') + ')' + (cut.award ? ' — 🎉 COLLECTION COMPLETE! +' + cut.award + ' ✦' : '');
+  }
+  renderCollections(cut ? cut.title : null, banner);
+  $('colPanel').style.display = 'block'; colOpen = true;
+}
+
 function rnd(a, b) { return Math.floor(a + Math.random() * (b - a + 1)); }
 function rf(a, b) { return a + Math.random() * (b - a); }
 
@@ -414,9 +521,11 @@ let shards = 0;
 let unlocked = {};      // upgrade id -> true (persistent)
 let boughtEver = {};    // upgrade id -> true (persistent; gates unlock prerequisites)
 let keptCasePlan = null;   // the shop's case layout (its shelves), kept across runs (Roy, 2026-10-16)
+let collected = {};        // collection title -> true (persistent meta-progression, Roy 2026-10-16)
+let collectionsDone = {};  // collection id -> true once its completion shards were awarded
 let keptCats = null;       // the shop cat(s) are kept too — pets, not employees (Roy, 2026-10-16). Checkers ARE employees and are not kept.
-function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; } } catch (e) {} }
+function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, collected, collectionsDone })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
 loadMeta();
 
 // ---------- Customers ----------
@@ -442,7 +551,7 @@ function spawnCustomer() {
   if (isBuyer) { c.kind = 'buyer'; }
   else {
     c.kind = 'seller';
-    c.book = makeBook(genre, Math.random() < 0.12);
+    c.book = makeBook(genre, Math.random() < 0.12, true);
     c.floor = Math.max(3, Math.round(c.book.value * rf(0.55, 0.85)));
     c.ask = Math.round(c.book.value * rf(1.0, 1.35));   // may open ABOVE the book's true sell value
   }
@@ -515,7 +624,7 @@ function openHaggle(seller) {
   $('haggleTitle').textContent = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
   $('haggleBook').innerHTML = 'Book: <span class="swatch" style="background:' + GENRE_COLOR[seller.book.genre] + '"></span>' +
     GENRE_NAME[seller.book.genre] + (seller.book.special ? ' (special edition!)' : '') +
-    '';
+    (seller.book.title ? '<br>📚 \u201C' + seller.book.title + '\u201D — from the \u201C' + colById(seller.book.col).name + '\u201D collection' + (collected[seller.book.title] ? ' (already in your collection)' : ' — <b style="color:#ffd94a;">NEW for your collection!</b>') : '');
   const [lo, hi] = appraisalRange(seller.book);
   const slider = $('offerSlider');
   const max = Math.max(hi, seller.ask);            // bar runs 0 → top of range or the ask, whichever is higher
@@ -536,7 +645,7 @@ function syncOffer() {
 $('offerSlider').addEventListener('input', syncOffer);
 function closeHaggle(result) {
   const s = haggle.seller;
-  if (result === 'deal') { s.state = 'leaveHappy'; }
+  if (result === 'deal') { s.state = 'leaveHappy'; const cut = noteCollectionPurchase(s.book); if (cut) pendingColCut = cut; }
   else if (result === 'dismiss') { s.state = 'toBuy'; }   // back out, no penalty: seller keeps waiting at the buy counter
   else if (result === 'decline') { if (haggle.dealt) s.state = 'leaveHappy'; else { s.state = 'leaveMad'; stats.turnedAway++; } }
   haggle = null;
@@ -594,6 +703,7 @@ function closeReveal() {
   const rev = $('haggleReveal');
   rev.classList.remove('pop'); rev.innerHTML = '';
   if (haggle && haggle.dealt) { flash('Bought for ' + haggle.seller.book.cost + ' 🪙'); closeHaggle('deal'); }
+  if (pendingColCut) { const c = pendingColCut; pendingColCut = null; openCollections(c); }
 }
 
 // ---------- Music (generative, WebAudio — no audio files) ----------
@@ -700,7 +810,7 @@ function collide(p) {
 // makes the nightly restock offer: him at 25/book instead of the Man's 30.
 
 function update(dt) {
-  if (!running || over) return;
+  if (!running || over || colOpen) return;
   dayT += dt;
   if (dayT >= DAY_LEN) { endDay(); return; }
   spawnT -= dt;
@@ -1449,6 +1559,9 @@ function loop(ts) {
   update(dt);
   requestAnimationFrame(loop);
 }
+$('colClose').addEventListener('click', () => { $('colPanel').style.display = 'none'; colOpen = false; });
+$('colBtn').addEventListener('click', () => { if (colOpen) { $('colPanel').style.display = 'none'; colOpen = false; } else openCollections(null); });
+updateColCount();
 $('buildTag').textContent = BUILD_LABEL + ' build';
 // A refresh / back-forward-cache restore can resurrect a stale DOM with panels
 // in odd states — on a persisted pageshow, force one clean opening state.
