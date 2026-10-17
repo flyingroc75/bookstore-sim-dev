@@ -717,7 +717,7 @@ function update(dt) {
   const bq = buyQueue(), sq = sellQueue();
   const shelfWaiters = {}; for (const g of activeGenres) shelfWaiters[g] = 0;
   for (const c of customers) {
-    if (c.state === 'leaveHappy' || c.state === 'leaveMad') { moveToward(c, DOOR.x, DOOR.y + 26, 150 * SPEED_MULT, dt); continue; }
+    if (c.state === 'leaveHappy' || c.state === 'leaveMad') { if (moveToward(c, DOOR.x, DOOR.y + 26, 150 * SPEED_MULT, dt)) c.gone = true; continue; }   // reaching the door despawns them (Roy, 2026-10-16: leavers used to hover stuck at the door — their target y=614 sat above the old y>616 removal line)
     if (c.kind === 'seller') {
       if (c.state === 'enter') { c.state = 'toBuy'; }
       if (c.state === 'toBuy' || c.state === 'haggle') {
@@ -756,7 +756,7 @@ function update(dt) {
       }
     }
   }
-  customers = customers.filter(c => !(c.y > H + 16 && (c.state === 'leaveHappy' || c.state === 'leaveMad')));
+  customers = customers.filter(c => !c.gone && !(c.y > H + 16 && (c.state === 'leaveHappy' || c.state === 'leaveMad')));
 
   updateCats(dt);
   runChecker(dt);
