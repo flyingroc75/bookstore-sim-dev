@@ -372,7 +372,8 @@ function reset() {
   customers = [];
   dayT = 0; spawnT = 1.2; running = false; over = false; haggle = null;
   stats = freshStats();
-  day = 1; dayStartCoins = coins; reputation = 25;
+  day = 1; dayStartCoins = coins;
+  reputation = Math.max(25, reputation);   // new run (Roy, 2026-10-16): reputation below 25 resets to 25; at or above 25 it carries over
   startNetWorth = coins + Object.values(shelfStock).flat().reduce((a, b) => a + (b.cost || 0), 0);
   player = { x: 480, y: 385, speed: 235 * SPEED_MULT, target: null };
   document.getElementById('tallyPanel').style.display = 'none';
