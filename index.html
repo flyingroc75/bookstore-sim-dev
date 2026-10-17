@@ -284,9 +284,9 @@ let introStep = -1, introCoins = 9999, coinAnim = null, landlord = null, storySe
 let coinParticles = [], lastCoinBucket = 99, coinSpawnT = 0, coinHold = 0;
 function startIntro() {
   introStep = 0; introCoins = 9999; coinAnim = null;
-  landlord = { id: 999, x: 532, y: 388, leaving: false, state: 'haggle', kind: 'seller',
+  landlord = { id: 999, x: 532, y: 356, leaving: false, state: 'haggle', kind: 'seller',
                look: { skin: '#c68863', hair: '#26221f', hairStyle: 1, coat: '#34303c' } };
-  player.x = 446; player.y = 388; player.target = null;
+  player.x = 446; player.y = 356; player.target = null;
   showIntroLine();
   $('introBar').style.display = 'block';
 }
@@ -953,10 +953,10 @@ function spawnConfetti() {
 }
 function startEnding() {
   endingStep = 0; playerLeaving = false;
-  endBuyer = { id: 998, x: 446, y: 388, state: 'haggle', kind: 'buyer', genre: 'green',
+  endBuyer = { id: 998, x: 446, y: 356, state: 'haggle', kind: 'buyer', genre: 'green',
                look: { skin: '#e8b48c', hair: '#6b4a2f', hairStyle: 0, coat: '#b0503c' } };
-  player.x = 532; player.y = 388; player.target = null;
-  coinFrom = endBuyer; coinTo = { x: 532, y: 354 }; coinLabel = 'H I S   C O I N S';
+  player.x = 532; player.y = 356; player.target = null;
+  coinFrom = endBuyer; coinTo = { x: 532, y: 322 }; coinLabel = 'H I S   C O I N S';
   showEndingLine();
   $('introBar').style.display = 'block';
 }
