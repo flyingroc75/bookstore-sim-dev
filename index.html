@@ -36,11 +36,15 @@
   #upPop p { color:#cbbd97; font-size:13.5px; line-height:1.45; margin:0 0 8px; }
   #upPop .popstatus { color:#ffd94a; font-size:13px; font-weight:bold; }
   #upPopClose { position:absolute; top:6px; right:10px; background:none; border:none; color:#cbbd97; font-size:19px; cursor:pointer; padding:2px 6px; }
-  #upgradesPanel { max-height:96%; overflow-y:auto; padding:14px 18px; }
+  /* Panel is a flex column that does NOT scroll itself; only #upScroll
+     (the cards) scrolls. So the header stays on top and the description
+     popup (#upPop, absolute over the panel) is always fully visible —
+     previously the whole panel scrolled and the popup centered on the
+     full scroll height, hiding it for icons lower down (Roy, 2026-10-16). */
+  #upgradesPanel { max-height:96%; overflow:hidden; padding:14px 18px; flex-direction:column; }
   #upgradesPanel h2 { margin:0 0 2px; font-size:23px; }
-  /* Sticky market header (Roy, 2026-10-16): title + next-day button share a
-     row and stay pinned to the top of the panel while the cards scroll. */
-  .uphead { position:sticky; top:-14px; z-index:4; background:#241a10; margin:-14px -18px 6px; padding:14px 18px 8px; border-bottom:1px solid #8a6d3f; }
+  #upScroll { overflow-y:auto; min-height:0; }
+  .uphead { background:#241a10; margin:-14px -18px 6px; padding:14px 18px 8px; border-bottom:1px solid #8a6d3f; flex:none; }
   .uphead .titlerow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .uphead h2 { margin:0; }
   #nextDayBtn { white-space:nowrap; }
@@ -123,7 +127,7 @@
       <div class="titlerow"><h2>🌙 Night Market</h2><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
       <p style="text-align:center; margin:2px 0 4px;">You have <b id="upCoins">0</b> <span class="coin"></span> · <b id="upShards">0</b> ✦ · Unlocks are permanent; purchases apply from tomorrow. Sell ✦ special books to earn Star Shards.</p>
     </div>
-    <div class="upcards" id="upCards"></div>
+    <div id="upScroll"><div class="upcards" id="upCards"></div></div>
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
   </div>
 
@@ -976,7 +980,7 @@ function composeTally() {
 $('restartBtn').addEventListener('click', () => {
   $('tallyPanel').style.display = 'none';
   renderUpgrades();
-  $('upgradesPanel').style.display = 'block';
+  $('upgradesPanel').style.display = 'flex';   // flex column: header fixed, cards scroll, popup overlays the panel
 });
 $('nextDayBtn').addEventListener('click', startNextDay);
 // ---------- Night Market upgrade tree ----------
