@@ -535,6 +535,8 @@ function reset() {
   upgrades = freshUpgrades();
   casePlan = keptCasePlan && keptCasePlan.length ? keptCasePlan.slice() : ['green', 'purple'];
   for (const g of new Set(casePlan)) if (g !== 'green' && g !== 'purple') upgrades[g] = true;
+  if (inheritCat && keptCats) { upgrades.cat = !!keptCats.cat; upgrades.cat2 = !!keptCats.cat2 && upgrades.cat; }   // the cat changes hands only when a run actually ends (Roy, 2026-10-17)
+  inheritCat = false;
   upgrades.shelves = Math.max(0, casePlan.length - new Set(casePlan).size);
   marketingActive = false;
   applyUpgrades();
@@ -590,7 +592,8 @@ let boughtEver = {};    // upgrade id -> true (persistent; gates unlock prerequi
 let keptCasePlan = null;   // the shop's case layout (its shelves), kept across runs (Roy, 2026-10-16)
 let collected = {};        // collection title -> true (persistent meta-progression, Roy 2026-10-16)
 let collectionsDone = {};  // collection id -> true once its completion shards were awarded
-let keptCats = null;       // legacy save field, no longer used: the cat is NOT inherited anymore (Roy reversed this 2026-10-17 — a new run starts cat-free). Checkers were never kept either.
+let keptCats = null;       // the cat(s) this run owns, saved at purchase. Inherited ONLY through the ending's Start Over (Roy, 2026-10-17): bankruptcy passes the cat to the next owner, but starting from scratch (page load / refresh) does not. Checkers are never kept.
+let inheritCat = false;    // armed by the Start Over button; consumed by reset()
 function saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, collected, collectionsDone })); } catch (e) {} }
 function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
 loadMeta();
@@ -1148,6 +1151,7 @@ function showBankrupt(kind) {
 }
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
 $('startOverBtn').addEventListener('click', () => {
+  inheritCat = true;   // the run ended — the next owner inherits the cat (Roy, 2026-10-17)
   $('endPanel').style.display = 'none';
   coinFrom = null; coinTo = null; coinLabel = 'Y O U R   C O I N S'; playerLeaving = false; transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
   reset(); running = true; musicStart();
@@ -1323,7 +1327,8 @@ $('upCards').addEventListener('click', e => {
     } else if (u.genre) { upgrades[u.id] = true; casePlan.push(u.id); }
     else upgrades[u.id] = true;
     keptCasePlan = casePlan.slice();
-    saveMeta();   // after the purchase lands, so the kept-shelves save is current
+    keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
+    saveMeta();   // after the purchase lands, so the kept-shelves/cats save is current
   }
   refreshHUD(); sfx('buy');
   renderUpgrades();
