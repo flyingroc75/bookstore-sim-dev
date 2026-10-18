@@ -855,6 +855,17 @@ function pluck(freq, t, dur, vol, type) {
   o.connect(g); g.connect(Music.ctx.destination);
   o.start(t); o.stop(t + dur + 0.05);
 }
+// A knock on wood (Roy, 2026-10-18: the first version "didn't sound
+// woody"): the crack is a short NOISE burst through a bandpass — pure
+// tones ring too clean — over the hollow resonance of a door.
+function knockThump(t) {
+  if (!Music._noiseBuf) { const len = Math.floor(Music.ctx.sampleRate * 0.05); const buf = Music.ctx.createBuffer(1, len, Music.ctx.sampleRate); const d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; Music._noiseBuf = buf; }
+  const src = Music.ctx.createBufferSource(); src.buffer = Music._noiseBuf;
+  const bp = Music.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 850; bp.Q.value = 0.9;
+  const ng = Music.ctx.createGain(); ng.gain.setValueAtTime(0.24, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+  src.connect(bp); bp.connect(ng); ng.connect(Music.ctx.destination); src.start(t); src.stop(t + 0.06);
+  pluck(185.0, t, 0.09, 0.10, 'sine'); pluck(415.0, t, 0.06, 0.05, 'sine'); pluck(612.0, t, 0.045, 0.032, 'sine'); pluck(118.0, t, 0.11, 0.085, 'triangle');
+}
 function scheduleStep(step, t) {
   const chord = CHORDS[Math.floor(step / 8) % CHORDS.length], beat = step % 8;
   if (beat === 0) pluck(chord[0] / 2, t, 1.6, 0.11, 'sine');
@@ -892,7 +903,7 @@ function sfx(kind) {
   else if (kind === 'boop') { pluck(739.99, t, 0.1, 0.035, 'sine'); pluck(1174.66, t + 0.06, 0.16, 0.035, 'sine'); }   // happy rep bump (Roy)
   else if (kind === 'bloop') { pluck(523.25, t, 0.12, 0.035, 'sine'); pluck(392.0, t + 0.07, 0.14, 0.035, 'sine'); pluck(261.63, t + 0.14, 0.22, 0.032, 'sine'); }   // customer leaves unhappy: descending bloop (Roy)
   else if (kind === 'thunk') { pluck(131.0, t, 0.09, 0.085, 'sine'); pluck(87.0, t + 0.01, 0.13, 0.07, 'triangle'); }   // a book thunked onto the shelf (Roy)
-  else if (kind === 'knock') { const k = (tt) => { pluck(164.0, tt, 0.07, 0.12, 'sine'); pluck(110.0, tt, 0.1, 0.1, 'triangle'); pluck(1244.0, tt, 0.02, 0.014, 'square'); }; k(t); k(t + 0.17); k(t + 0.44); }   // knock-knock… knock: a visitor at the door (Roy, 2026-10-18)
+  else if (kind === 'knock') { knockThump(t); knockThump(t + 0.17); knockThump(t + 0.44); }   // knock-knock… knock: a visitor at the door (Roy, 2026-10-18)
   else if (kind === 'tadah') { pluck(523.25, t, 0.16, 0.04); pluck(659.25, t + 0.07, 0.16, 0.04); pluck(783.99, t + 0.14, 0.2, 0.045); pluck(1046.5, t + 0.21, 0.34, 0.045); }   // collectible bought: ta-dah! (Roy)
   else if (kind === 'fanfare') { pluck(523.25, t, 0.16, 0.04); pluck(659.25, t + 0.07, 0.16, 0.04); pluck(783.99, t + 0.14, 0.2, 0.045); pluck(1046.5, t + 0.21, 0.3, 0.05); pluck(1318.5, t + 0.3, 0.42, 0.04); pluck(1567.98, t + 0.38, 0.5, 0.035); }   // collection COMPLETE
 }
