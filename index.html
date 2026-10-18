@@ -52,11 +52,11 @@
      (Roy, 2026-10-17): bottom-anchored dark bar, gold trim, name in gold
      caps, line in italic serif, choices as gold pills. */
   .panel.storybar { left:50%; top:auto; bottom:12px; transform:translateX(-50%); width:min(560px,92%); min-width:0;
-    background:rgba(30,21,13,.97); border:1.5px solid #c9a35a; border-radius:12px; padding:12px 18px 10px;
+    background:rgba(30,21,13,.97); border:1.5px solid #c9a35a; border-radius:12px; padding:9px 14px 7px;
     text-align:left; box-shadow:0 6px 22px rgba(0,0,0,.5); z-index:6; }
-  .storybar h2 { font:700 11px Georgia,serif; letter-spacing:.14em; color:#c9a35a; margin:0 0 4px; text-transform:uppercase; }
-  .storybar p { font:italic 15.5px Georgia,serif; color:#f3e9d2; line-height:1.5; margin:2px 0; }
-  .storybar .row { justify-content:flex-end; margin-top:9px; gap:8px; }
+  .storybar h2 { font:700 11px Georgia,serif; letter-spacing:.14em; color:#c9a35a; margin:0 0 2px; text-transform:uppercase; }
+  .storybar p { font:italic 15.5px Georgia,serif; color:#f3e9d2; line-height:1.38; margin:1px 0; }
+  .storybar .row { justify-content:flex-end; margin-top:6px; gap:8px; }
   .storybar button { background:transparent; border:1.5px solid #c9a35a; color:#f3e9d2; border-radius:8px; padding:6px 14px; font:14px Georgia,serif; cursor:pointer; }
   .storybar button.primary { background:#c9a35a; color:#241a10; font-weight:700; }
   .storybar button:disabled { opacity:.45; cursor:default; }
@@ -109,6 +109,10 @@
   button.primary { background:#8a6d1f; border-color:#e8c87a; font-weight:bold; }
   button:disabled { opacity:.4; cursor:default; }
   #offerVal { font-size:22px; color:#ffd98a; min-width:70px; text-align:center; }
+  #barWrap { position:relative; margin:17px 0 20px; }
+  #offerTri { position:absolute; top:-16px; transform:translateX(-50%); color:#f3e9d2; font-size:12px; line-height:1; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+  #trueMark { position:absolute; top:19px; transform:translateX(-50%); color:#ffd94a; font-size:11.5px; line-height:1; white-space:nowrap; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+  #trueMark .tt { font-size:11px; }
   input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:16px; border-radius:8px;
                       background:#5a4326; outline:none; margin:8px 0 2px; }
   input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:27px; height:27px; border-radius:50%;
@@ -157,7 +161,11 @@
     <p>Your appraisal: <b id="haggleRange" style="color:#35c4b5;"></b> <span style="color:#35c4b5;">(teal band on the bar)</span></p>
     <p>Seller asks: <b id="haggleAsk"></b> · Their patience is draining…</p>
     <p style="margin-top:10px;" id="offerLine">Your offer: <span id="offerVal">0</span> <span class="coin"></span></p>
-    <input type="range" id="offerSlider" min="0" step="1" value="0">
+    <div id="barWrap">
+      <div id="offerTri">▼</div>
+      <input type="range" id="offerSlider" min="0" step="1" value="0">
+      <div id="trueMark" style="display:none;"><span class="tt">▲</span> <span id="trueLbl"></span></div>
+    </div>
     <div class="row" id="haggleButtons">
       <button class="primary" id="offerBtn">Make offer</button>
       <button id="declineBtn">Decline</button>
@@ -755,7 +763,7 @@ function openHaggle(seller) {
   // Roy (2026-10-16): no haggling with full arms — the deal could never
   // complete and the panel trapped the player. Seller just keeps waiting.
   if (carry.length >= CARRY_MAX) { denyShake(); flash('🧺 Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
-  haggle = { seller, offer: Math.max(1, Math.floor(seller.ask * 0.6)) };
+  haggle = { seller, offer: Math.max(1, Math.floor(seller.ask * 0.6)), refusals: 0 };
   seller.state = 'haggle';
   $('haggleTitle').textContent = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
   $('haggleBook').innerHTML = 'Book: <span class="swatch" style="background:' + GENRE_COLOR[seller.book.genre] + '"></span>' +
@@ -766,7 +774,8 @@ function openHaggle(seller) {
   const max = Math.max(hi, seller.ask);            // bar runs 0 → top of range or the ask, whichever is higher
   slider.max = max; slider.value = haggle.offer;
   const pLo = (lo / max * 100).toFixed(1), pHi = (hi / max * 100).toFixed(1);
-  slider.style.background = 'linear-gradient(90deg, #5a4326 0%, #5a4326 ' + pLo + '%, #35c4b5 ' + pLo + '%, #35c4b5 ' + pHi + '%, #5a4326 ' + pHi + '%, #5a4326 100%)';
+  slider.style.background = 'repeating-linear-gradient(45deg, rgba(255,255,255,.13) 0 7px, rgba(255,255,255,0) 7px 14px), linear-gradient(90deg, #5a4326 0%, #5a4326 ' + pLo + '%, #35c4b5 ' + pLo + '%, #35c4b5 ' + pHi + '%, #5a4326 ' + pHi + '%, #5a4326 100%)';   // diagonal stripes over the value bar (Roy, 2026-10-18)
+  $('trueMark').style.display = 'none';
   $('haggleRange').textContent = lo + ' – ' + hi + ' coins';
   $('haggleAsk').textContent = seller.ask;
   $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : '';
@@ -777,6 +786,8 @@ function syncOffer() {
   if (haggle) haggle.offer = +$('offerSlider').value;
   $('offerVal').textContent = haggle ? haggle.offer : 0;
   $('offerBtn').disabled = !haggle || haggle.offer > coins || haggle.offer < 1;
+  const sl = $('offerSlider'), mx = +sl.max || 1;   // the triangle rides above the bar, on the offer (Roy, 2026-10-18)
+  $('offerTri').style.left = (haggle ? haggle.offer : 0) / mx * 100 + '%';
 }
 $('offerSlider').addEventListener('input', syncOffer);
 function closeHaggle(result) {
@@ -800,10 +811,16 @@ $('offerBtn').addEventListener('click', () => {
     haggle.dealt = true;
     showReveal(s.book, offer);
   } else {
+    haggle.refusals = (haggle.refusals || 0) + 1;   // Roy (2026-10-18): the THIRD refused offer and they walk out in anger
+    if (haggle.refusals >= 3) {
+      flash('😤 Three low offers — they storm off!');
+      closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s);
+      return;
+    }
     s.patience -= 10;
     s.ask = Math.max(s.floor + 3, Math.round((s.ask + offer) / 2));
     $('haggleAsk').textContent = s.ask;
-    $('haggleMsg').textContent = offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.';
+    $('haggleMsg').textContent = (offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.') + (haggle.refusals === 2 ? ' ⚠️ One more low offer and they walk!' : '');
     if (s.patience <= 0) { closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s); }
   }
 });
@@ -814,6 +831,11 @@ $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) c
 // book's ACTUAL sale value (count-up), with a Continue button to dismiss it.
 let revealTimer = null;
 function showReveal(book, paid) {
+  const sl = $('offerSlider'), mx = +sl.max || 1;   // reveal the price ON the bar: a gold marker at the book's true sell price (Roy, 2026-10-18)
+  const tm = $('trueMark');
+  tm.style.left = Math.min(100, book.sellPrice / mx * 100) + '%';
+  $('trueLbl').textContent = 'actually sells for ' + book.sellPrice;
+  tm.style.display = 'block';
   const margin = book.sellPrice - paid;
   const rev = $('haggleReveal');
   rev.innerHTML = '<div class="card">🤝 Deal! You paid <b>' + paid + '</b> 🪙<br>The book actually sells for<br>' +
@@ -838,6 +860,7 @@ function closeReveal() {
   if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
   const rev = $('haggleReveal');
   rev.classList.remove('pop'); rev.innerHTML = '';
+  $('trueMark').style.display = 'none';
   if (haggle && haggle.dealt) { flash('Bought for ' + haggle.seller.book.cost + ' 🪙'); closeHaggle('deal'); }
   if (pendingColCut) { const c = pendingColCut; pendingColCut = null; openCollections(c); }
 }
