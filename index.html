@@ -185,6 +185,10 @@
     <div class="row"><button class="primary" id="restockYes">Deal</button><button id="restockNo">No thanks</button></div>
   </div>
 
+  <div class="panel storybar" id="wagePanel" style="display:none;">
+    <p id="wageBody"></p>
+    <div class="row"><button class="primary" id="wagePay">Pay</button><button id="wageFace" style="display:none;">Face the music…</button></div>
+  </div>
   <div id="closeOverlay"><div class="big" id="closeTitle">🌙 Day 1 complete</div><div class="sub">You lock up, sweep the floor, and count the till…</div></div>
 
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
@@ -372,7 +376,7 @@ function gameOverRep() {
   $('hagglePanel').style.display = 'none';   // close whatever was mid-flight; refreshHUD() settles the HUD
   showBankrupt('rep');
 }
-function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, restockBy: '', shards: 0, sweptBack: 0 }; }
+function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, wagesPaid: 0, restockBy: '', shards: 0, sweptBack: 0 }; }
 let stats, haggle; // haggle = { seller, offer }
 let startNetWorth = 0;
 let player;
@@ -615,6 +619,8 @@ let cats = [];
 let checkerT = 0;
 const CHAIR = { x: 404, y: 306 };   // up and to the left of the rug's top-left corner (Roy, 2026-10-18; the rug spans 402..558 x 346..404)
 const CAT_RADIUS = 120;
+const CASHIER1 = { id: 990, x: 824, y: 444, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#c68850', hair: '#26221f', hairStyle: 2, coat: '#3f5a46', flip: false } };
+const CASHIER2 = { id: 991, x: 754, y: 444, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#f2c894', hair: '#b5522a', hairStyle: 3, coat: '#42536c', flip: true } };
 function newCat(color) { return { x: rf(200, 760), y: rf(240, 420), tx: 480, ty: 330, nap: rf(0, 2), color }; }
 function resetCats() { cats = []; if (upgrades.cat) cats.push(newCat('#e8a34c')); if (upgrades.cat2) cats.push(newCat('#9aa0a8')); }
 function updateCats(dt) {
@@ -1199,6 +1205,22 @@ function endDay() {
     else if (carry.length < CARRY_MAX) carry.push(b);
     else { stats.wasted++; stats.wastedValue += b.sellPrice; }
   }
+  showClosing(afterClosing);
+}
+// The night's order (Roy, 2026-10-18): after the closing pause, the
+// Checker's wage comes BEFORE the supplier's knock — then the restock,
+// then the rent. Can't pay the wage: bankrupt.
+function afterClosing() { if (upgrades.checker) showWage(); else restockStep(); }
+function checkerWages() { return (upgrades.checker ? 50 : 0) + (upgrades.checker2 ? 50 : 0); }   // 50 per cashier, per day
+function showWage() {
+  const due = checkerWages(), n = (upgrades.checker ? 1 : 0) + (upgrades.checker2 ? 1 : 0), canPay = coins >= due;
+  $('wageBody').innerHTML = '🧾 <b>' + (n > 1 ? 'Your checkers hold out their hands' : 'Your checker holds out a hand') + '.</b> “Wages for the day: <b>' + due + '</b> ' + COIN + '.”';
+  $('wagePay').textContent = canPay ? 'Pay ' + due : 'You can’t afford ' + due;
+  $('wagePay').disabled = !canPay;
+  $('wageFace').style.display = canPay ? 'none' : '';
+  $('wagePanel').style.display = 'block';
+}
+function restockStep() {
   // The Mysterious Man's restock offer: if even ONE slot is empty at close,
   // he offers to fill every empty slot at 30 a book — books that sell for 25.
   // He appears BEFORE the tally so the numbers include the deal.
@@ -1217,10 +1239,10 @@ function endDay() {
       : '<b>MYSTERIOUS MAN:</b> “Psst. Shelves are looking bare — <b>' + spaces + '</b>. I’ll fill every one tonight: <b>30</b> ' + COIN + ' a book. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”';   // Roy: he names only your cost, never the books' sell price — the trap stays hidden
     $('restockYes').textContent = coins >= pendingRestock.total ? 'Deal — pay ' + pendingRestock.total : 'You can\'t afford ' + pendingRestock.total;
     $('restockYes').disabled = coins < pendingRestock.total;
-    showClosing(() => { sfx('knock'); stageVisitor(bySupplier ? 'sleazy' : 'man'); $('restockPanel').style.display = 'block'; });
+    sfx('knock'); stageVisitor(bySupplier ? 'sleazy' : 'man'); $('restockPanel').style.display = 'block';
     return;
   }
-  showClosing(proceedAfterRestock);
+  proceedAfterRestock();
 }
 
 let pendingRestock = null;
@@ -1235,6 +1257,13 @@ $('restockYes').addEventListener('click', () => {
   $('restockPanel').style.display = 'none';
   proceedAfterRestock();
 });
+$('wagePay').addEventListener('click', () => {
+  const due = checkerWages();
+  coins -= due; stats.wagesPaid = due; refreshHUD();
+  $('wagePanel').style.display = 'none';
+  restockStep();
+});
+$('wageFace').addEventListener('click', () => { $('wagePanel').style.display = 'none'; showBankrupt('wage'); });
 $('restockNo').addEventListener('click', () => {
   releaseVisitor();
   stats.restockDeclined = pendingRestock ? pendingRestock.empty : 0;
@@ -1290,7 +1319,10 @@ $('rentPay').addEventListener('click', () => {
 $('winOk').addEventListener('click', () => { $('winPanel').style.display = 'none'; releaseVisitor(); composeTally(); });
 $('rentFace').addEventListener('click', () => { $('rentPanel').style.display = 'none'; releaseVisitor(); showBankrupt('rent'); });
 function showBankrupt(kind) {
-  if (kind === 'rep') {
+  if (kind === 'wage') {
+    $('bankruptTitle').textContent = '🧾 Unpaid wages';
+    $('bankruptBody').innerHTML = "Your checker hangs up his apron and walks — and word gets around: a shop that doesn't pay its people doesn't stay open. The deed goes back to the Mysterious Man… unless <i>you</i> can find a buyer first.";
+  } else if (kind === 'rep') {
     $('bankruptTitle').textContent = '🪦 Reputation: zero';
     $('bankruptBody').innerHTML = 'Word travels fast in this town. No sellers, no buyers — nobody crosses your threshold anymore. The shop is finished… unless <i>you</i> can find a buyer first.';
   } else {
@@ -1365,6 +1397,7 @@ function composeTally() {
     'Books bought: <b>' + stats.bought + '</b> for <b>' + stats.spent + ' 🪙</b> total<br>' +
     (stats.restocked ? (stats.restockBy === 'supplier' ? '🕶️ The Sleazy Supplier' : '🧥 The Mysterious Man') + ' restocked <b>' + stats.restocked + '</b> books for <b>' + stats.restockCost + ' 🪙</b> (they sell for 25 each)<br>' : '') +
     (stats.restockDeclined ? 'You turned down the restock from ' + (stats.restockBy === 'supplier' ? 'the Sleazy Supplier' : 'the Mysterious Man') + ' (' + stats.restockDeclined + ' empty space' + (stats.restockDeclined === 1 ? '' : 's') + ' left bare)<br>' : '') +
+    (stats.wagesPaid ? '🧾 Checker wages: <b>−' + stats.wagesPaid + ' 🪙</b><br>' : '') +
     (stats.rentPaid ? '🧥 Rent to the Mysterious Man: <b>−' + stats.rentPaid + ' 🪙</b> cash<br>' : '') +
     'Wasted at closing (no shelf or arm space): <b>' + stats.wasted + '</b> books' + (stats.wasted ? ' worth <b>' + stats.wastedValue + ' 🪙</b> at sale value' : '') + '<br>' +
     'Taken back from customers at closing: <b>' + stats.sweptBack + '</b> books<br>' +
@@ -1405,10 +1438,10 @@ const UPGRADES = [
   { id: 'reliable',  svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><rect x=\"21\" y=\"11\" width=\"8\" height=\"9\" fill=\"#7d5a30\"/><rect x=\"9\" y=\"19\" width=\"31\" height=\"27\" rx=\"2\" fill=\"#b3813f\"/><rect x=\"9\" y=\"19\" width=\"31\" height=\"8\" fill=\"#96733d\"/><path d=\"M24.5 19 v27\" stroke=\"#8a6d3f\" stroke-width=\"3\"/><path d=\"M13 32 h9 M13 37.4 h9\" stroke=\"#8a6d3f\" stroke-width=\"2.2\"/><circle cx=\"43\" cy=\"41\" r=\"11.4\" fill=\"#3fae5a\" stroke=\"#f3e9d2\" stroke-width=\"2.6\"/><path d=\"M37.2 41.4 l4.1 4.1 l7.6 -8\" stroke=\"#fff\" stroke-width=\"3.2\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>", icon: '🤝', name: 'Reliable Supplier', unlock: 4, cost: 40, prereq: 'supplier', runPrereq: 'supplier', desc: 'An honest supplier. Books cost <b>20</b> and sell for <b>25</b>.' },
   { id: 'speed2',    svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><path d=\"M10 21 C15.6 13.8 25.4 8.6 36.4 7.8 C31.8 11.8 30.8 15.2 32.8 18.2 C25.2 16.9 16.6 17.9 10 21 Z\" fill=\"#efe3c8\" stroke=\"#cbbd97\" stroke-width=\"1.4\"/><path d=\"M3 24 h10 M1.6 31 h8.4\" stroke=\"#ffd94a\" stroke-width=\"3.2\" stroke-linecap=\"round\"/><path d=\"M8 33 C15 32 21 27 26 18 C28 14.6 32.4 14.8 34 18 L36.4 24.6 L50 29.6 C53.4 30.8 53 36 49.6 36.4 L11 38 C7 38.2 5.4 34.6 8 33 Z\" fill=\"#d95f43\"/><rect x=\"6\" y=\"37.4\" width=\"47\" height=\"5\" rx=\"2.4\" fill=\"#f3e9d2\"/><path d=\"M26.4 20.6 l5 3 M23.6 25.6 l5 3\" stroke=\"#f3e9d2\" stroke-width=\"2.4\" stroke-linecap=\"round\"/></svg>", icon: '👟', name: 'Comfy Shoes II', unlock: 5, cost: 50, prereq: 'speed', desc: 'You know every shortcut in this shop. <b>You move 40% faster.</b>' },
   { id: 'bookcase2', svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><rect x=\"14\" y=\"2.6\" width=\"32\" height=\"54.8\" fill=\"#7d5a30\"/><rect x=\"17\" y=\"5.6\" width=\"26\" height=\"48.8\" fill=\"#43301d\"/><line x1=\"17\" y1=\"17.6\" x2=\"43\" y2=\"17.6\" stroke=\"#96733d\" stroke-width=\"2.2\"/><line x1=\"17\" y1=\"29.8\" x2=\"43\" y2=\"29.8\" stroke=\"#96733d\" stroke-width=\"2.2\"/><line x1=\"17\" y1=\"42\" x2=\"43\" y2=\"42\" stroke=\"#96733d\" stroke-width=\"2.2\"/><g fill=\"#3fae5a\"><rect x=\"20\" y=\"9\" width=\"4.4\" height=\"8.6\"/><rect x=\"33\" y=\"8.6\" width=\"4.4\" height=\"9\"/></g><g fill=\"#8b4fc4\"><rect x=\"26.4\" y=\"9.4\" width=\"4.4\" height=\"8.2\"/><rect x=\"20\" y=\"21\" width=\"4.4\" height=\"8.8\"/></g><g fill=\"#e08a3c\"><rect x=\"26.4\" y=\"21.4\" width=\"4.4\" height=\"8.4\"/><rect x=\"33\" y=\"20.8\" width=\"4.4\" height=\"9\"/></g><g fill=\"#3cc4b0\"><rect x=\"20\" y=\"33.2\" width=\"4.4\" height=\"8.8\"/><rect x=\"33\" y=\"33\" width=\"4.4\" height=\"9\"/></g><g fill=\"#c4503c\"><rect x=\"26.4\" y=\"33.6\" width=\"4.4\" height=\"8.4\"/><rect x=\"20\" y=\"45.4\" width=\"4.4\" height=\"9\"/></g><g fill=\"#3fae5a\"><rect x=\"26.4\" y=\"45\" width=\"4.4\" height=\"9.4\"/><rect x=\"33\" y=\"45.6\" width=\"4.4\" height=\"8.8\"/></g></svg>", icon: '🗄️', name: 'Bookcase Upgrade II', unlock: 5, cost: 40, prereq: 'bookcase', desc: 'Floor-to-ceiling cases. Each holds <b>12 books</b>.' },
-  { id: 'checker',   svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><path d=\"M27.4 16 V3.6 h9.6 V16 l-2.4 -2.2 l-2.4 2.2 l-2.4 -2.2 Z\" fill=\"#f3e9d2\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"19\" rx=\"3\" fill=\"#5a6e8c\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"6\" fill=\"#42536c\"/><rect x=\"16.6\" y=\"14.6\" width=\"20\" height=\"13\" rx=\"2\" fill=\"#f3e9d2\"/><rect x=\"20\" y=\"17.8\" width=\"13\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"20\" y=\"22\" width=\"8.6\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"24.6\" y=\"25.6\" width=\"4\" height=\"4.4\" fill=\"#42536c\"/><circle cx=\"20.4\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"20.4\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/></svg>", icon: '🧾', name: 'Checker', unlock: 5, cost: 60, prereq: 'shelf', desc: 'Hire a cashier: the front buyer at the checkout is rung up automatically every <b>4 seconds</b>.' },
+  { id: 'checker',   svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><path d=\"M27.4 16 V3.6 h9.6 V16 l-2.4 -2.2 l-2.4 2.2 l-2.4 -2.2 Z\" fill=\"#f3e9d2\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"19\" rx=\"3\" fill=\"#5a6e8c\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"6\" fill=\"#42536c\"/><rect x=\"16.6\" y=\"14.6\" width=\"20\" height=\"13\" rx=\"2\" fill=\"#f3e9d2\"/><rect x=\"20\" y=\"17.8\" width=\"13\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"20\" y=\"22\" width=\"8.6\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"24.6\" y=\"25.6\" width=\"4\" height=\"4.4\" fill=\"#42536c\"/><circle cx=\"20.4\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"20.4\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/></svg>", icon: '🧾', name: 'Checker', unlock: 5, cost: 60, prereq: 'shelf', desc: 'Hire a cashier: the front buyer at the checkout is rung up automatically every <b>4 seconds</b>. He stands at the counter all day and takes a <b>50</b> 🪙 wage at day\'s end, before the supplier\'s knock — <b>can\'t pay, and you\'re bankrupt</b>.' },
   { id: 'poetry',    svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><path d=\"M43 5.4 C30.6 9.4 20.4 21.4 15.8 39.6 L12.6 52.4 L19 50.2 C34.4 43.8 45 27.4 43 5.4 Z\" fill=\"#f3e9d2\"/><path d=\"M40.6 9.8 C31.4 17.8 23.2 29.8 17.2 46.8\" stroke=\"#c96a1e\" stroke-width=\"2.2\" fill=\"none\"/><path d=\"M33 15.4 l-6.4 1 M29.4 21.6 l-6.8 2 M25.4 28.4 l-6.4 2.8 M21.8 35.6 l-5.8 3.4\" stroke=\"#e08a3c\" stroke-width=\"1.7\" stroke-linecap=\"round\"/><path d=\"M37.4 43.4 h15.2 l-2.6 10.8 h-10 Z\" fill=\"#3a3f4a\"/><ellipse cx=\"45\" cy=\"43.4\" rx=\"7.6\" ry=\"2.3\" fill=\"#23242c\"/><circle cx=\"45\" cy=\"49\" r=\"2.1\" fill=\"#e08a3c\"/></svg>", icon: '🎨', name: 'New Genre: Poetry', unlock: 5, cost: 80, prereq: 'bookcase', genre: true, desc: 'Open a <b>Poetry</b> section (orange) — new genre, new customers. Includes its first bookcase.' },
   { id: 'cat2',      svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><circle cx=\"41\" cy=\"30\" r=\"12.4\" fill=\"#9aa0a8\"/><path d=\"M31.8 22.6 L29.8 11.6 L40.2 16.8 Z\" fill=\"#9aa0a8\"/><path d=\"M50.2 22.6 L52.2 11.6 L41.8 16.8 Z\" fill=\"#9aa0a8\"/><circle cx=\"36.5\" cy=\"28.8\" r=\"1.8\" fill=\"#2b2b2b\"/><circle cx=\"45.5\" cy=\"28.8\" r=\"1.8\" fill=\"#2b2b2b\"/><ellipse cx=\"41\" cy=\"33.2\" rx=\"1.7\" ry=\"1.2\" fill=\"#c96a7a\"/><circle cx=\"21\" cy=\"37\" r=\"13.4\" fill=\"#e8a34c\"/><path d=\"M11.2 28.8 L9.2 16.4 L20.2 21.6 Z\" fill=\"#e8a34c\"/><path d=\"M30.8 28.8 L32.8 16.4 L21.8 21.6 Z\" fill=\"#e8a34c\"/><circle cx=\"16.4\" cy=\"35\" r=\"2\" fill=\"#2b2b2b\"/><circle cx=\"25.6\" cy=\"35\" r=\"2\" fill=\"#2b2b2b\"/><ellipse cx=\"21\" cy=\"39.4\" rx=\"1.9\" ry=\"1.4\" fill=\"#c96a7a\"/></svg>", icon: '🐱', name: 'Second Cat', unlock: 8, cost: 60, prereq: 'cat', desc: 'The first cat gets a colleague. Two roaming circles of calm.' },
-  { id: 'checker2',  svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><g transform=\"translate(-5.4,7.4) scale(0.86)\"><path d=\"M27.4 16 V3.6 h9.6 V16 l-2.4 -2.2 l-2.4 2.2 l-2.4 -2.2 Z\" fill=\"#f3e9d2\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"19\" rx=\"3\" fill=\"#5a6e8c\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"6\" fill=\"#42536c\"/><rect x=\"16.6\" y=\"14.6\" width=\"20\" height=\"13\" rx=\"2\" fill=\"#f3e9d2\"/><rect x=\"20\" y=\"17.8\" width=\"13\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"20\" y=\"22\" width=\"8.6\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"24.6\" y=\"25.6\" width=\"4\" height=\"4.4\" fill=\"#42536c\"/><circle cx=\"20.4\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"20.4\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/></g><rect x=\"37\" y=\"3.4\" width=\"19\" height=\"13\" rx=\"2.4\" fill=\"#5a6e8c\"/><rect x=\"40.4\" y=\"6.6\" width=\"12.2\" height=\"5.4\" fill=\"#f3e9d2\"/><circle cx=\"48\" cy=\"47\" r=\"10.4\" fill=\"#ffd94a\"/><text x=\"48\" y=\"51.6\" font-size=\"11.5\" font-weight=\"bold\" fill=\"#7a5410\" text-anchor=\"middle\">\u00d72</text></svg>", icon: '🧾', name: 'Second Checker', unlock: 8, cost: 80, prereq: 'checker', desc: 'A second cashier joins: automatic checkout every <b>2 seconds</b>.' },
+  { id: 'checker2',  svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><g transform=\"translate(-5.4,7.4) scale(0.86)\"><path d=\"M27.4 16 V3.6 h9.6 V16 l-2.4 -2.2 l-2.4 2.2 l-2.4 -2.2 Z\" fill=\"#f3e9d2\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"19\" rx=\"3\" fill=\"#5a6e8c\"/><rect x=\"12\" y=\"29\" width=\"36\" height=\"6\" fill=\"#42536c\"/><rect x=\"16.6\" y=\"14.6\" width=\"20\" height=\"13\" rx=\"2\" fill=\"#f3e9d2\"/><rect x=\"20\" y=\"17.8\" width=\"13\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"20\" y=\"22\" width=\"8.6\" height=\"2.8\" fill=\"#7a8a6a\"/><rect x=\"24.6\" y=\"25.6\" width=\"4\" height=\"4.4\" fill=\"#42536c\"/><circle cx=\"20.4\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"40\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"20.4\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"30\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/><circle cx=\"39.6\" cy=\"44.6\" r=\"1.8\" fill=\"#f3e9d2\"/></g><rect x=\"37\" y=\"3.4\" width=\"19\" height=\"13\" rx=\"2.4\" fill=\"#5a6e8c\"/><rect x=\"40.4\" y=\"6.6\" width=\"12.2\" height=\"5.4\" fill=\"#f3e9d2\"/><circle cx=\"48\" cy=\"47\" r=\"10.4\" fill=\"#ffd94a\"/><text x=\"48\" y=\"51.6\" font-size=\"11.5\" font-weight=\"bold\" fill=\"#7a5410\" text-anchor=\"middle\">\u00d72</text></svg>", icon: '🧾', name: 'Second Checker', unlock: 8, cost: 80, prereq: 'checker', desc: 'A second cashier joins: automatic checkout every <b>2 seconds</b>. Each cashier takes <b>50</b> 🪙 a day in wages.' },
   { id: 'comics',    svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><rect x=\"7\" y=\"8.6\" width=\"46\" height=\"32.4\" rx=\"8\" fill=\"#3cc4b0\"/><path d=\"M19.6 40.6 L17.4 51.4 L31 40.8 Z\" fill=\"#3cc4b0\"/><path d=\"M30 13.6 l2.7 6.9 7.3 -0.6 -5.4 5 1.9 7.1 -6.5 -3.6 -6.5 3.6 1.9 -7.1 -5.4 -5 7.3 0.6 Z\" fill=\"#ffd94a\"/></svg>", icon: '🎭', name: 'New Genre: Comics', unlock: 8, cost: 100, prereq: 'poetry', genre: true, desc: 'Open a <b>Comics</b> section (teal). Includes its first bookcase.' },
 ];
 const upById = id => UPGRADES.find(u => u.id === id);
@@ -1770,6 +1803,10 @@ function draw() {
     ctx.fillText(GENRE_NAME[g].toUpperCase(), s.x + s.w / 2, s.y - 21.5);   // name only — Roy cut the book counts (2026-10-17)
   }
   // counters — panelled wood, countertop slab, props
+  // the Checker is an actual person, standing at the checkout counter
+  // (Roy, 2026-10-18) — drawn before the counters so the countertop
+  // occludes his lower half: head and shoulders over the till
+  if (upgrades.checker && introStep < 0 && endingStep < 0) { drawCustomer(CASHIER1); if (upgrades.checker2) drawCustomer(CASHIER2); }
   for (const [c, label, isBuy] of [[BUY_COUNTER, 'WE BUY BOOKS', true], [SELL_COUNTER, 'CHECKOUT', false]]) {
     ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(c.x - 3, c.y + c.h + 4, c.w + 6, 7);
     ctx.fillStyle = '#77552c'; ctx.fillRect(c.x, c.y, c.w, c.h);
