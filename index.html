@@ -71,12 +71,19 @@
   .awardpop { display:inline-block; animation:awardPulse .8s ease; }
   .colsec { margin:10px 0 4px; font-size:14px; color:#e8c87a; }
   .coltiles { display:flex; flex-wrap:wrap; gap:6px; }
-  .coltile { width:86px; padding:7px 4px 5px; background:#2e2115; border:1px solid #5a4326; border-radius:8px; text-align:center; }
+  .coltile { width:86px; padding:7px 4px 5px; background:#2e2115; border:1px solid #5a4326; border-radius:8px; text-align:center; position:relative; }
   .coltile .ic { font-size:26px; display:block; }
   .coltile .tt { font-size:9.5px; line-height:1.25; color:#d8c9a8; display:block; margin-top:3px; }
   .coltile.miss .ic { filter:grayscale(1); opacity:.3; }
   .coltile.miss .tt { color:#8a7c60; }
   .coltile.justgot { border-color:#ffd94a; box-shadow:0 0 12px #ffd94a; }
+  /* The collection reveal is an EVENT (Roy, 2026-10-17): the tile starts
+     grayed like its neighbours, then bursts into colour with a gold flash
+     and a shower of sparkles as the album glides to it. */
+  @keyframes tileReveal { 0% { transform:scale(.9); filter:grayscale(1) brightness(.7); } 30% { transform:scale(1.24); filter:grayscale(0) brightness(1.18); box-shadow:0 0 0 3px #ffd94a, 0 0 30px 9px rgba(255,217,74,.65); } 55% { transform:scale(1.04); } 75% { transform:scale(1.12); } 100% { transform:scale(1); filter:grayscale(0); box-shadow:0 0 0 2px #ffd94a, 0 0 14px 3px rgba(255,217,74,.4); } }
+  .coltile.justgot { animation:tileReveal 1.15s ease .5s both; z-index:2; }
+  @keyframes sparkFly { 0% { transform:translate(-50%,-50%) scale(.5); opacity:0; } 20% { opacity:1; } 100% { transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.25); opacity:0; } }
+  .coltile .spark { position:absolute; left:50%; top:36%; color:#ffd94a; pointer-events:none; opacity:0; animation:sparkFly .9s ease-out both; z-index:3; }
   .uphead { background:#241a10; margin:-14px -18px 6px; padding:14px 18px 8px; border-bottom:1px solid #8a6d3f; flex:none; }
   .uphead .titlerow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .uphead h2 { margin:0; }
@@ -431,7 +438,8 @@ function renderCollections(highlightTitle, banner) {
     html += '<div class="colsec">' + (c.genre === 'purple' ? '🟣' : '🟢') + ' ' + c.name + ' — ' + got + '/' + c.books.length + (collectionsDone[c.id] ? ' ✓ +' + collectionAward(c) + '✦' : ' · complete it for +' + collectionAward(c) + '✦') + '</div><div class="coltiles">';
     for (const [title, icon] of c.books) {
       const owned = !!collected[title];
-      html += '<div class="coltile' + (owned ? '' : ' miss') + (title === highlightTitle ? ' justgot' : '') + '"><span class="ic">' + icon + '</span><span class="tt">' + (owned ? title : '???') + '</span></div>';   // uncollected titles stay secret until the book is received (Roy, 2026-10-17)
+      const sparks = title === highlightTitle ? '<span class="spark" style="--dx:-30px;--dy:-34px;animation-delay:.62s;font-size:13px">✦</span><span class="spark" style="--dx:26px;--dy:-38px;animation-delay:.7s;font-size:11px">✦</span><span class="spark" style="--dx:-34px;--dy:8px;animation-delay:.78s;font-size:11px">✦</span><span class="spark" style="--dx:32px;--dy:12px;animation-delay:.86s;font-size:14px">✦</span><span class="spark" style="--dx:0px;--dy:-46px;animation-delay:.94s;font-size:12px">✦</span>' : '';
+      html += '<div class="coltile' + (owned ? '' : ' miss') + (title === highlightTitle ? ' justgot' : '') + '"><span class="ic">' + icon + '</span><span class="tt">' + (owned ? title : '???') + '</span>' + sparks + '</div>';   // uncollected titles stay secret until the book is received (Roy, 2026-10-17)
     }
     html += '</div>';
   }
@@ -447,6 +455,7 @@ function openCollections(cut) {
   renderCollections(cut ? cut.title : null, banner);
   if (cut && cut.award) { const b = $('colBanner'); if (b && b.classList) { b.classList.remove('awardpop'); void b.offsetWidth; b.classList.add('awardpop'); } }
   $('colPanel').style.display = 'block'; colOpen = true;
+  if (cut) setTimeout(() => sfx('shard'), 560);   // a shimmer lands as the tile bursts into colour
   if (cut) {   // Roy (2026-10-17): the album is long — glide to the book just bought
     const grid = $('colGrid');
     const tile = grid && grid.querySelector ? grid.querySelector('.justgot') : null;
