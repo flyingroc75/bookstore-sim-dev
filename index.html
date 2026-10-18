@@ -319,7 +319,7 @@ const SELL_COUNTER = { x: 570, y: 420, w: 300, h: 52 };
 const DOOR = { x: 84, y: 534 };   // the threshold: just inside the storefront, ABOVE the pavement (Roy, 2026-10-16). People spawn outside (below the canvas) and come in through it.
 const ROOM_MAX = 8;   // at most 8 people in the shop (Roy, 2026-10-18): anyone beyond that queues on the pavement, patience still draining
 function insideCount() { return customers.reduce((n, c) => n + (c.inside ? 1 : 0), 0); }
-function queueSlot(i) { return { x: 140 + i * 38, y: 562 }; }   // the outside line, single file along the pavement from the door
+function queueSlot(i) { return i < 22 ? { x: 140 + i * 38, y: 562 } : { x: 140 + (i - 22) * 38, y: 585 }; }   // the outside line along the pavement; past 22 it wraps to a second row on the street edge (slots ran off-canvas before — Codex sim)
 let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 
 // ---------- State ----------
@@ -372,6 +372,7 @@ function repDownFX(c) {
   if (c) { floaters.push({ x: c.x, y: c.y - 62, t: 0, arrow: 'down' }); bursts.push(makeBurst(c.x, c.y - 30, '#e06868', '✚')); }
 }
 function gameOverRep() {
+  if (haggle && haggle.dealt) creditDeal(haggle.seller, false);   // a purchase already paid for still counts (Codex review)
   over = true; running = false; haggle = null;
   $('hagglePanel').style.display = 'none';   // close whatever was mid-flight; refreshHUD() settles the HUD
   showBankrupt('rep');
@@ -386,7 +387,7 @@ function makeBook(genre, special, titled) {
   // player, who only ever sees an appraisal range around it.
   const bv = BOOK_VALUES[genre] || BOOK_VALUES.green;
   const value = special ? rnd(bv.s[0], bv.s[1]) : rnd(bv.n[0], bv.n[1]);
-  const b = { genre, special: !!special, value, sellPrice: value, cost: 0, title: null, col: null };   // cost = what we paid (0 for opening stock)
+  const b = { id: ++bookSeq, genre, special: !!special, value, sellPrice: value, cost: 0, title: null, col: null };   // cost = what we paid (0 for opening stock)
   if (titled && Math.random() < 0.3) { const pick = pickCollectionBook(genre); if (pick) { b.title = pick.title; b.col = pick.col; b.icon = pick.icon; } }   // ~30% of seller books are collectible titles
   return b;
 }
@@ -656,12 +657,14 @@ let collected = {};        // collection title -> true (persistent meta-progress
 let collectionsDone = {};  // collection id -> true once its completion shards were awarded
 let keptCats = null;       // the cat(s) this run owns, saved at purchase. Inherited ONLY through the ending's Start Over (Roy, 2026-10-17): bankruptcy passes the cat to the next owner, but starting from scratch (page load / refresh) does not. Checkers are never kept.
 let keptStock = null;      // the shop's unsold inventory, captured when a run ends: the next run's shelves start from THESE books, with only the empty spaces filled by flat-25 stock (Roy, 2026-10-18)
+let bookSeq = 0;           // stable id per book instance, so a special pays its Star Shard once per BOOK, not once per sale (Codex review: Continue was farming the same book's shard)
+let shardPaid = {};        // book id -> true once its shard has been paid
 let inheritCat = false;    // armed by the Start Over button; consumed by reset()
 let keptCap = 6;           // the bookcase tier the shelves carry (6/9/12) — kept WITH the shelves across runs (Roy, 2026-10-17: on reset the cases "became not upgraded")
 function saveMeta() { try {
     if (typeof upgrades !== 'undefined' && upgrades && (upgrades.bookcase || upgrades.bookcase2)) keptCap = Math.max(keptCap, upgrades.bookcase2 ? 12 : 9);   // the shelves remember their tier
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, keptCap, keptStock, collected, collectionsDone })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; if (d.keptStock) keptStock = d.keptStock; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, keptCap, keptStock, bookSeq, shardPaid, collected, collectionsDone })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; if (d.keptStock) keptStock = d.keptStock; if (d.bookSeq) bookSeq = d.bookSeq; if (d.shardPaid) shardPaid = d.shardPaid; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
 loadMeta();
 function saveRunSnapshot() {
   try {
@@ -672,6 +675,12 @@ function saveRunSnapshot() {
   } catch (e) {}
 }
 function loadRunSnapshot() { try { const d = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); return d && d.day ? d : null; } catch (e) { return null; } }
+function resyncSnapshot() {   // after a Night Market purchase (Codex review, 2026-10-18): without this, a refresh + Continue rolled the purchase back — the case vanished while its cost came back
+  const sn = loadRunSnapshot(); if (!sn) return;
+  sn.coins = coins; sn.reputation = reputation; sn.casePlan = casePlan.slice();
+  sn.upgrades = JSON.parse(JSON.stringify(upgrades));
+  try { localStorage.setItem(RUN_KEY, JSON.stringify(sn)); } catch (e) {}
+}
 function restoreRun(snap) {
   day = snap.day; coins = snap.coins; reputation = snap.reputation;
   upgrades = snap.upgrades; casePlan = snap.casePlan.slice(); keptCasePlan = casePlan.slice();
@@ -766,7 +775,8 @@ function doInteract() {
 function sellToBuyer(b) {
   const bk = b.book; if (!bk) return;
   coins += bk.sellPrice; stats.sold++; stats.revenue += bk.sellPrice; stats.costOfSold += (bk.cost || 0);
-  if (bk.special) { shards++; stats.shards++; saveMeta(); flash('+1 ✦ Star Shard!'); celebrateShards(1, b.x, b.y - 34); }
+  if (bk.id == null) bk.id = ++bookSeq;   // books from older saves get an id on first sale
+  if (bk.special && !shardPaid[bk.id]) { shardPaid[bk.id] = true; shards++; stats.shards++; saveMeta(); flash('+1 ✦ Star Shard!'); celebrateShards(1, b.x, b.y - 34); }
   else flash('+' + bk.sellPrice + ' 🪙');
   b.book = null;              // sold books leave with the buyer — for good
   b.state = 'leaveHappy';
@@ -801,7 +811,7 @@ function openHaggle(seller) {
   $('haggleRange').textContent = lo + ' – ' + hi + ' coins';
   $('haggleAsk').textContent = seller.ask;
   $('trueMark').style.display = 'none';   // the true-price marker only appears after a deal
-  $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : '';
+  $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : (seller.refusals === 2 ? '⚠️ One more low offer and they walk!' : '');
   $('hagglePanel').style.display = 'block';   // visible before placeAskTri measures the bar
   syncOffer(); placeAskTri();
 }
@@ -821,11 +831,15 @@ function syncOffer() {
   // (the offer itself is the slider thumb + the readout; the ▼ triangle marks the ASK — see placeAskTri)
 }
 $('offerSlider').addEventListener('input', syncOffer);
+function creditDeal(s, withCut) {   // collection credit for a completed purchase — exactly once, on whichever close ends the haggle (Codex review: a deal left open at day's end lost its credit)
+  const cut = noteCollectionPurchase(s.book);
+  if (cut) { if (withCut) pendingColCut = cut; sfx(cut.award ? 'fanfare' : 'tadah'); }
+}
 function closeHaggle(result) {
   const s = haggle.seller;
-  if (result === 'deal') { s.state = 'leaveHappy'; const cut = noteCollectionPurchase(s.book); if (cut) { pendingColCut = cut; sfx(cut.award ? 'fanfare' : 'tadah'); } happyCustomer(s); }
+  if (result === 'deal') { s.state = 'leaveHappy'; creditDeal(s, true); happyCustomer(s); }
   else if (result === 'dismiss') { s.state = 'toBuy'; }   // back out, no penalty: seller keeps waiting at the buy counter
-  else if (result === 'decline') { if (haggle.dealt) s.state = 'leaveHappy'; else { s.state = 'leaveMad'; stats.turnedAway++; } }
+  else if (result === 'decline') { if (haggle.dealt) { s.state = 'leaveHappy'; creditDeal(s, false); } else { s.state = 'leaveMad'; stats.turnedAway++; } }
   haggle = null;
   $('hagglePanel').style.display = 'none';
 }
@@ -842,8 +856,8 @@ $('offerBtn').addEventListener('click', () => {
     haggle.dealt = true;
     showReveal(s.book, offer);
   } else {
-    haggle.refusals = (haggle.refusals || 0) + 1;   // Roy (2026-10-18): the THIRD refused offer and they walk out in anger
-    if (haggle.refusals >= 3) {
+    s.refusals = (s.refusals || 0) + 1;   // Roy (2026-10-18): the THIRD refused offer and they walk out in anger. The strikes live on the SELLER (Codex review): Later + reopening must not reset them
+    if (s.refusals >= 3) {
       flash('😤 Three low offers — they storm off!');
       closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s);
       return;
@@ -851,7 +865,7 @@ $('offerBtn').addEventListener('click', () => {
     s.patience -= 10;
     s.ask = Math.max(s.floor + 3, Math.round((s.ask + offer) / 2));
     $('haggleAsk').textContent = s.ask; placeAskTri();
-    $('haggleMsg').textContent = (offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.') + (haggle.refusals === 2 ? ' ⚠️ One more low offer and they walk!' : '');
+    $('haggleMsg').textContent = (offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.') + (s.refusals === 2 ? ' ⚠️ One more low offer and they walk!' : '');
     if (s.patience <= 0) { closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s); }
   }
 });
@@ -986,7 +1000,6 @@ const keys = {};
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
   if (e.key.toLowerCase() === 'e' || e.key === ' ') { doInteract(); e.preventDefault(); }
-  if (e.key.toLowerCase() === 'r' && over) { startNextDay(); }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
@@ -1049,7 +1062,7 @@ function update(dt) {
   for (const c of customers) {
     if (c.state === 'approach') {   // outside → the door; in if there's room, else join the pavement queue
       if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) {
-        if (c.inside || insideCount() < ROOM_MAX) { c.state = 'enter'; c.inside = true; }   // c.inside: a promoted queuer whose slot is already reserved
+        if (c.inside || (insideCount() < ROOM_MAX && !doorQueue.length)) { c.state = 'enter'; c.inside = true; }   // c.inside: a promoted queuer whose slot is already reserved; a queue, once formed, is strictly first-in-first-out (Codex review)
         else c.state = 'queue';
       }
       continue;
@@ -1158,6 +1171,7 @@ function applyUpgrades() {
   marketingTonight = false;
 }
 function startNextDay() {
+  if ($('upgradesPanel').style.display === 'none') return;   // the ONLY way onward is the Night Market's button — a stray keypress must never skip wages/rent/bankruptcy (Codex review, 2026-10-18)
   day++;
   marketingActive = marketingTonight;   // capture before applyUpgrades clears it
   applyUpgrades();
@@ -1196,6 +1210,8 @@ function endDay() {
   over = true; running = false;
   clearDayFX();   // no frozen flash text, floaters or stray Interact button in the night screens (Roy, 2026-10-17)
   refreshHUD();   // settle the HUD NOW — a last-second sale/purchase otherwise leaves it stale vs. the rent check
+  if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }   // a pending reveal must not fire into the night screens (Codex review)
+  $('haggleReveal').classList.remove('pop'); $('haggleReveal').innerHTML = '';
   if (haggle) closeHaggle('decline');
   $('hagglePanel').style.display = 'none';
   // Roy (2026-10-17), final order: arm books restock first; books left at
@@ -1239,7 +1255,7 @@ function restockStep() {
     const bySupplier = upgrades.supplier || upgrades.reliable;
     const perBook = upgrades.reliable ? 20 : bySupplier ? 25 : 30;   // Reliable Supplier restocks at 20 (Roy, 2026-10-18)
     pendingRestock = { empty: emptySlots, total: emptySlots * perBook, perBook, bySupplier };
-    stats.restockBy = bySupplier ? 'supplier' : 'man';
+    stats.restockBy = upgrades.reliable ? 'reliable' : bySupplier ? 'supplier' : 'man';
     const spaces = emptySlots + ' empty space' + (emptySlots === 1 ? '' : 's');
     $('restockBody').innerHTML = bySupplier
       ? '<b>' + (upgrades.reliable ? 'RELIABLE SUPPLIER' : 'SLEAZY SUPPLIER') + ':</b> “Psst, friend. Gaps on the shelves — <b>' + spaces + '</b>. I fill every one tonight: <b>' + pendingRestock.perBook + '</b> ' + COIN + ' a book, and they sell for <b>25</b>. That’s <b>' + pendingRestock.total + '</b> ' + COIN + ' all in. Deal?”'
@@ -1342,6 +1358,11 @@ function showBankrupt(kind) {
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
 $('startOverBtn').addEventListener('click', () => {
   inheritCat = true;   // the run ended — the next owner inherits the cat (Roy, 2026-10-17)
+  // every unsold book conveys (Codex review, 2026-10-18): arms books and
+  // books in buyers' hands are shelved first if there's room — the rep
+  // ending strikes mid-day, before any closing sweep could gather them
+  for (const b of carry.slice()) if (shelveBook(b.genre, b)) carry.splice(carry.indexOf(b), 1);
+  for (const c of customers) if (c.kind === 'buyer' && c.book && shelveBook(c.book.genre, c.book)) c.book = null;
   keptStock = JSON.parse(JSON.stringify(shelfStock));   // and the unsold inventory conveys with the shop (Roy, 2026-10-18)
   saveMeta();
   snapshotArmed = true;
@@ -1404,8 +1425,8 @@ function composeTally() {
     '🌙 <b>Day ' + day + ' complete.</b><br><br>' +
     'Books sold: <b>' + stats.sold + '</b> rang up <b>' + stats.revenue + ' 🪙</b><br>' +
     'Books bought: <b>' + stats.bought + '</b> for <b>' + stats.spent + ' 🪙</b> total<br>' +
-    (stats.restocked ? (stats.restockBy === 'supplier' ? '🕶️ The Sleazy Supplier' : '🧥 The Mysterious Man') + ' restocked <b>' + stats.restocked + '</b> books for <b>' + stats.restockCost + ' 🪙</b> (they sell for 25 each)<br>' : '') +
-    (stats.restockDeclined ? 'You turned down the restock from ' + (stats.restockBy === 'supplier' ? 'the Sleazy Supplier' : 'the Mysterious Man') + ' (' + stats.restockDeclined + ' empty space' + (stats.restockDeclined === 1 ? '' : 's') + ' left bare)<br>' : '') +
+    (stats.restocked ? (stats.restockBy === 'reliable' ? '🤝 The Reliable Supplier' : stats.restockBy === 'supplier' ? '🕶️ The Sleazy Supplier' : '🧥 The Mysterious Man') + ' restocked <b>' + stats.restocked + '</b> books for <b>' + stats.restockCost + ' 🪙</b> (they sell for 25 each)<br>' : '') +
+    (stats.restockDeclined ? 'You turned down the restock from ' + (stats.restockBy === 'reliable' ? 'the Reliable Supplier' : stats.restockBy === 'supplier' ? 'the Sleazy Supplier' : 'the Mysterious Man') + ' (' + stats.restockDeclined + ' empty space' + (stats.restockDeclined === 1 ? '' : 's') + ' left bare)<br>' : '') +
     (stats.wagesPaid ? '🧾 Checker wages: <b>−' + stats.wagesPaid + ' 🪙</b><br>' : '') +
     (stats.rentPaid ? '🧥 Rent to the Mysterious Man: <b>−' + stats.rentPaid + ' 🪙</b> cash<br>' : '') +
     'Wasted at closing (no shelf or arm space): <b>' + stats.wasted + '</b> books' + (stats.wasted ? ' worth <b>' + stats.wastedValue + ' 🪙</b> at sale value' : '') + '<br>' +
@@ -1454,13 +1475,14 @@ const UPGRADES = [
   { id: 'comics',    svg: "<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><rect x=\"7\" y=\"8.6\" width=\"46\" height=\"32.4\" rx=\"8\" fill=\"#3cc4b0\"/><path d=\"M19.6 40.6 L17.4 51.4 L31 40.8 Z\" fill=\"#3cc4b0\"/><path d=\"M30 13.6 l2.7 6.9 7.3 -0.6 -5.4 5 1.9 7.1 -6.5 -3.6 -6.5 3.6 1.9 -7.1 -5.4 -5 7.3 0.6 Z\" fill=\"#ffd94a\"/></svg>", icon: '🎭', name: 'New Genre: Comics', unlock: 8, cost: 100, prereq: 'poetry', genre: true, desc: 'Open a <b>Comics</b> section (teal). Includes its first bookcase.' },
 ];
 const upById = id => UPGRADES.find(u => u.id === id);
+const reservedSlots = () => (upgrades.poetry ? 0 : 1) + (upgrades.comics ? 0 : 1);   // cases kept free for genre sections not yet opened, so Poetry/Comics can never be locked out by extra shelves (Codex review, 2026-10-18)
 function upState(u) {
   if (u.service) return marketingTonight ? 'done' : 'buy';
   if (u.prereq && !boughtEver[u.prereq]) return 'hidden';   // Roy: don't list it at all until the prerequisite is bought
   if (u.runPrereq && !upgrades[u.runPrereq]) return 'hidden';   // Reliable Supplier: hidden until the Sleazy Supplier is bought THIS RUN (Roy, 2026-10-18 — boughtEver alone showed it on fresh runs)
   if (u.unlock > 0 && !unlocked[u.id]) return 'unlock';
   if (u.genre && casePlan.length >= 8) return 'noslot';
-  if (u.repeatable) return casePlan.length >= 8 ? 'maxed' : 'buy';
+  if (u.repeatable) return casePlan.length >= 8 - reservedSlots() ? 'maxed' : 'buy';
   return upgrades[u.id] ? 'owned' : 'buy';
 }
 function renderUpgrades() {
@@ -1496,7 +1518,7 @@ function showUpPop(id) {
     st === 'owned' ? 'Owned ✓ — in effect from tomorrow' :
     st === 'done' ? 'Running tonight ✓' :
     st === 'unlock' ? 'Unlock for ' + u.unlock + ' ✦, then buy for ' + u.cost + ' coins' :
-    st === 'maxed' ? 'Your shop already has all 8 cases' :
+    st === 'maxed' ? (casePlan.length >= 8 ? 'Your shop already has all 8 cases' : 'Floor space is being kept for the Poetry and Comics sections') :
     st === 'noslot' ? 'No floor space left for a new section' :
     (u.unlock > 0 ? 'Unlocked ✓ · Buy for ' + u.cost + ' coins' : 'Buy for ' + u.cost + ' coins');
   $('upPop').style.display = 'flex';
@@ -1531,6 +1553,7 @@ $('upCards').addEventListener('click', e => {
     keptCap = upgrades.bookcase2 ? 12 : upgrades.bookcase ? 9 : 6;
     saveMeta();   // after the purchase lands, so the kept-shelves/cats save is current
   }
+  resyncSnapshot();   // a refresh tonight must not refund or erase this purchase
   refreshHUD(); sfx('buy');
   renderUpgrades();
 });
@@ -2123,7 +2146,7 @@ titleRaf = requestAnimationFrame(drawTitleArt);
 // A refresh / back-forward-cache restore can resurrect a stale DOM with panels
 // in odd states — on a persisted pageshow, force one clean opening state.
 addEventListener('pageshow', e => {
-  if (e.persisted) { reset(); if (storySeen) running = true; draw(); }
+  if (e.persisted) location.reload();   // a back/forward-cache restore reboots to the title screen, where Continue is offered — it must not silently reset the run to Day 1 (Codex review, 2026-10-18)
 });
 reset();
 draw();
