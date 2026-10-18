@@ -1016,7 +1016,8 @@ function update(dt) {
         drainPatience(c, 1.5, dt);
         if (c.patience <= 0) { // leaves, book goes back on the shelf
           if (shelveBook(c.genre, c.book)) { c.book = null; c.state = 'leaveMad'; stats.walkWait++; repDown(); }
-          else c.patience = c.maxPatience * 0.45;   // no empty slot to put it back in — he buys it after all
+          else if (carry.length < CARRY_MAX) { carry.push(c.book); c.book = null; c.state = 'leaveMad'; stats.walkWait++; repDown(); }   // no empty slot: the book lands in the bookseller's arms (Roy, 2026-10-17)
+          else { stats.wasted++; stats.wastedValue += c.book.sellPrice; c.book = null; c.state = 'leaveMad'; stats.walkWait++; repDown(); }   // arms full too: the book is wasted
         }
       }
     }
