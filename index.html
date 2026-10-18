@@ -12,13 +12,17 @@
   #hud { display:flex; gap:22px; font-size:16px; margin-bottom:8px; flex-wrap:wrap; justify-content:center; }
   #hud b { color:#e8c87a; }
   #wrap { position:relative; }
-  canvas { background:#4a3826; border:3px solid #8a6d3f; border-radius:8px; max-width:96vw; height:auto; touch-action:none; }
+  canvas { background:#4a3826; border:3px solid #8a6d3f; border-radius:8px; width:min(960px,96vw); height:auto; aspect-ratio:960/600; display:block; touch-action:none; }
+  /* width + aspect-ratio (not just max-width): iOS was laying out the wrap
+     at the canvas's intrinsic 600px height instead of its scaled height,
+     so the bottom-anchored dialogs floated far below the visible shop —
+     the "too much space" gap Roy reported, 2026-10-18. */
   .panel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
            background:#241a10; border:2px solid #e8c87a; border-radius:10px; padding:20px 24px;
            min-width:340px; max-width:92%; box-shadow:0 10px 40px rgba(0,0,0,.6); display:none; z-index:5; }
   #titlePanel { width:min(680px, 94vw); text-align:center; }
   #titlePanel h2 { font-size:32px; margin-bottom:12px; }
-  #titleArt { width:100%; display:block; border-radius:10px; border:1.5px solid #c9a35a; background:#6d5138; }
+  #titleArt { width:100%; height:auto; aspect-ratio:640/340; display:block; border-radius:10px; border:1.5px solid #c9a35a; background:#6d5138; }
   #titleSave { min-height:20px; color:#cbb27a; font-size:14px; margin:10px 0 2px; }
   #titlePanel .row button { font-size:19px; padding:11px 30px; margin-top:8px; }
   #closeOverlay { position:absolute; inset:0; background:rgba(24,16,8,.62); z-index:4;
