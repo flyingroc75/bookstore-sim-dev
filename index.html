@@ -114,7 +114,7 @@
   button:disabled { opacity:.4; cursor:default; }
   #offerVal { font-size:22px; color:#ffd98a; min-width:70px; text-align:center; }
   #barWrap { position:relative; margin:17px 0 20px; }
-  #askTri { position:absolute; top:-16px; transform:translateX(-50%); color:#f3e9d2; font-size:12px; line-height:1; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+  #askTri { position:absolute; top:-16px; transform:translateX(-50%); color:#e8c87a; font-size:12px; line-height:1; pointer-events:none; }
   #trueMark { position:absolute; top:19px; transform:translateX(-50%); color:#ffd94a; font-size:11.5px; line-height:1; white-space:nowrap; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
   #trueMark .tt { font-size:11px; }
   input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:16px; border-radius:8px;
@@ -769,10 +769,10 @@ function openHaggle(seller) {
   if (carry.length >= CARRY_MAX) { denyShake(); flash('🧺 Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
   haggle = { seller, offer: Math.max(1, Math.floor(seller.ask * 0.6)), refusals: 0 };
   seller.state = 'haggle';
-  $('haggleTitle').textContent = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
-  $('haggleBook').innerHTML = 'Book: <span class="swatch" style="background:' + GENRE_COLOR[seller.book.genre] + '"></span>' +
-    GENRE_NAME[seller.book.genre] + (seller.book.special ? ' (special edition!)' : '') +
-    (seller.book.title ? '<br>📚 \u201C' + seller.book.title + '\u201D — from the \u201C' + colById(seller.book.col).name + '\u201D collection' + (collected[seller.book.title] ? ' (already in your collection)' : ' — <b style="color:#ffd94a;">NEW for your collection!</b>') : '');
+  $('haggleTitle').innerHTML = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + '<span class="swatch" style="background:' + GENRE_COLOR[seller.book.genre] + '"></span> ' + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
+  const hb = $('haggleBook');   // no "Book: Non-fiction" line (Roy, 2026-10-18) — the genre lives in the title now; this line is only for collectible titles
+  if (seller.book.title) { hb.style.display = ''; hb.innerHTML = '📚 \u201C' + seller.book.title + '\u201D — from the \u201C' + colById(seller.book.col).name + '\u201D collection' + (collected[seller.book.title] ? ' (already in your collection)' : ' — <b style="color:#ffd94a;">NEW for your collection!</b>'); }
+  else { hb.style.display = 'none'; hb.innerHTML = ''; }
   const [lo, hi] = appraisalRange(seller.book);
   const slider = $('offerSlider');
   const max = Math.max(hi, seller.ask);            // bar runs 0 → top of range or the ask, whichever is higher
@@ -787,13 +787,18 @@ function openHaggle(seller) {
   $('haggleRange').textContent = lo + ' – ' + hi + ' coins';
   $('haggleAsk').textContent = seller.ask;
   $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : '';
+  $('hagglePanel').style.display = 'block';   // visible before placeAskTri measures the bar
   syncOffer(); placeAskTri();
-  $('hagglePanel').style.display = 'block';
 }
-function placeAskTri() {   // the ▼ sits on the seller's asking price (Roy, 2026-10-18); it slides when a counter drops the ask
-  const sl = $('offerSlider'), mx = +sl.max || 1;
-  $('askTri').style.left = (haggle ? haggle.seller.ask : 0) / mx * 100 + '%';
+function barX(v) {   // pixel position of a value on the bar, in the SLIDER's own geometry:
+  // the thumb's centre travels 13.5px -> width-13.5px, so a raw % left the
+  // triangle visibly off the mark (Roy, 2026-10-18: "It's not aligned")
+  const sl = $('offerSlider'), mx = +sl.max || 1, w = sl.clientWidth || 0;
+  const p = Math.min(1, Math.max(0, v / mx));
+  return w > 0 ? (13.5 + p * (w - 27)) + 'px' : p * 100 + '%';
 }
+function placeAskTri() { if (haggle) $('askTri').style.left = barX(haggle.seller.ask); }   // the ▼ sits on the seller's asking price; it slides when a counter drops the ask
+addEventListener('resize', () => { if (haggle) placeAskTri(); });
 function syncOffer() {
   if (haggle) haggle.offer = +$('offerSlider').value;
   $('offerVal').textContent = haggle ? haggle.offer : 0;
@@ -844,7 +849,7 @@ let revealTimer = null;
 function showReveal(book, paid) {
   const sl = $('offerSlider'), mx = +sl.max || 1;   // reveal the price ON the bar: a gold marker at the book's true sell price (Roy, 2026-10-18)
   const tm = $('trueMark');
-  tm.style.left = Math.min(100, book.sellPrice / mx * 100) + '%';
+  tm.style.left = barX(book.sellPrice);
   $('trueLbl').textContent = 'actually sells for ' + book.sellPrice;
   tm.style.display = 'block';
   const margin = book.sellPrice - paid;
