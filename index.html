@@ -313,6 +313,9 @@ const RESERVED_SLOTS = [
 const BUY_COUNTER  = { x: 90,  y: 420, w: 300, h: 52 };   // moved up a bit (Roy, 2026-10-16) so the counters clear the door
 const SELL_COUNTER = { x: 570, y: 420, w: 300, h: 52 };
 const DOOR = { x: 84, y: 534 };   // the threshold: just inside the storefront, ABOVE the pavement (Roy, 2026-10-16). People spawn outside (below the canvas) and come in through it.
+const ROOM_MAX = 8;   // at most 8 people in the shop (Roy, 2026-10-18): anyone beyond that queues on the pavement, patience still draining
+function insideCount() { return customers.reduce((n, c) => n + (c.inside ? 1 : 0), 0); }
+function queueSlot(i) { return { x: 140 + i * 38, y: 562 }; }   // the outside line, single file along the pavement from the door
 let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 
 // ---------- State ----------
@@ -610,7 +613,7 @@ function reset() {
 // ---------- Cats, checker, chair (upgrade effects) ----------
 let cats = [];
 let checkerT = 0;
-const CHAIR = { x: 480, y: 252 };
+const CHAIR = { x: 430, y: 332 };   // at the rug's top-left corner (Roy, 2026-10-18; the rug spans 402..558 x 346..404)
 const CAT_RADIUS = 120;
 function newCat(color) { return { x: rf(200, 760), y: rf(240, 420), tx: 480, ty: 330, nap: rf(0, 2), color }; }
 function resetCats() { cats = []; if (upgrades.cat) cats.push(newCat('#e8a34c')); if (upgrades.cat2) cats.push(newCat('#9aa0a8')); }
@@ -1029,11 +1032,26 @@ function update(dt) {
 
   // customers
   const bq = buyQueue(), sq = sellQueue();
+  const doorQueue = customers.filter(c => c.state === 'queue');
   const shelfWaiters = {}; for (const g of activeGenres) shelfWaiters[g] = 0;
   for (const c of customers) {
-    if (c.state === 'approach') { if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) c.state = 'enter'; continue; }   // outside → in through the door (no patience drain out there)
+    if (c.state === 'approach') {   // outside → the door; in if there's room, else join the pavement queue
+      if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) {
+        if (c.inside || insideCount() < ROOM_MAX) { c.state = 'enter'; c.inside = true; }   // c.inside: a promoted queuer whose slot is already reserved
+        else c.state = 'queue';
+      }
+      continue;
+    }
+    if (c.state === 'queue') {   // waiting outside for a spot — patience still drains (Roy, 2026-10-18)
+      const qi = doorQueue.indexOf(c);
+      if (qi === 0 && insideCount() < ROOM_MAX) { c.state = 'approach'; c.inside = true; continue; }   // a spot opened: reserve it and head for the door
+      moveToward(c, queueSlot(Math.max(0, qi)), 125 * SPEED_MULT, dt);
+      c.patience -= 1.5 * dt;   // plain drain — no cat comfort through the wall
+      if (c.patience <= 0) { c.state = 'leaveMad'; c.out = true; c.outX = c.x; stats.walkWait++; repDown(c); }
+      continue;
+    }
     if (c.state === 'leaveHappy' || c.state === 'leaveMad') {   // out through the door first, then away across the pavement
-      if (!c.out) { if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) { c.out = true; c.outX = DOOR.x + rf(-18, 18); } }
+      if (!c.out) { if (moveToward(c, DOOR.x, DOOR.y, 150 * SPEED_MULT, dt)) { c.out = true; c.inside = false; c.outX = DOOR.x + rf(-18, 18); } }   // crossing out frees a room slot
       else if (moveToward(c, c.outX, H + 24, 150 * SPEED_MULT, dt)) c.gone = true;
       continue;
     }
@@ -1280,6 +1298,7 @@ function showBankrupt(kind) {
     $('bankruptBody').innerHTML = "You can't make the rent. The deed goes back to the Mysterious Man… unless. Unless <i>you</i> can find a buyer first.";
   }
   $('bankruptPanel').style.display = 'block';
+  $('startOverBtn').textContent = kind === 'rep' ? 'Start over' : 'Continue';   // on bankruptcy the ending's button reads "Continue", not "Start over" (Roy, 2026-10-18)
 }
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
 $('startOverBtn').addEventListener('click', () => {
