@@ -1057,7 +1057,8 @@ function update(dt) {
     if (c.state === 'queue') {   // waiting outside for a spot — patience still drains (Roy, 2026-10-18)
       const qi = doorQueue.indexOf(c);
       if (qi === 0 && insideCount() < ROOM_MAX) { c.state = 'approach'; c.inside = true; continue; }   // a spot opened: reserve it and head for the door
-      moveToward(c, queueSlot(Math.max(0, qi)), 125 * SPEED_MULT, dt);
+      const slot = queueSlot(Math.max(0, qi));
+      moveToward(c, slot.x, slot.y, 125 * SPEED_MULT, dt);
       c.patience -= 1.5 * dt;   // plain drain — no cat comfort through the wall
       if (c.patience <= 0) { c.state = 'leaveMad'; c.out = true; c.outX = c.x; stats.walkWait++; repDown(c); }
       continue;
