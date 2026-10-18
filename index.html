@@ -613,7 +613,7 @@ function reset() {
 // ---------- Cats, checker, chair (upgrade effects) ----------
 let cats = [];
 let checkerT = 0;
-const CHAIR = { x: 430, y: 332 };   // at the rug's top-left corner (Roy, 2026-10-18; the rug spans 402..558 x 346..404)
+const CHAIR = { x: 404, y: 306 };   // up and to the left of the rug's top-left corner (Roy, 2026-10-18; the rug spans 402..558 x 346..404)
 const CAT_RADIUS = 120;
 function newCat(color) { return { x: rf(200, 760), y: rf(240, 420), tx: 480, ty: 330, nap: rf(0, 2), color }; }
 function resetCats() { cats = []; if (upgrades.cat) cats.push(newCat('#e8a34c')); if (upgrades.cat2) cats.push(newCat('#9aa0a8')); }
