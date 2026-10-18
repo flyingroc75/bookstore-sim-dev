@@ -348,7 +348,7 @@ function gameOverRep() {
   $('hagglePanel').style.display = 'none';   // close whatever was mid-flight; refreshHUD() settles the HUD
   showBankrupt('rep');
 }
-function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, restockBy: '', shards: 0 }; }
+function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, restockBy: '', shards: 0, sweptBack: 0 }; }
 let stats, haggle; // haggle = { seller, offer }
 let startNetWorth = 0;
 let player;
@@ -1105,7 +1105,10 @@ function endDay() {
   // the checkout counter go LAST, but each still shelves if its genre has
   // space, otherwise it takes an arm slot freed by the arm books shelving.
   const pool = carry.slice();
-  for (const c of customers) if (c.kind === 'buyer' && c.book && (c.state === 'toSell' || c.state === 'queueSell')) pool.push(c.book);
+  // Possession, not state (Roy, 2026-10-17 — he kept feeling books were
+  // lost at closing): ANY book in a buyer's hands at close is shop stock
+  // and comes back, whatever the customer happened to be doing.
+  for (const c of customers) if (c.kind === 'buyer' && c.book) { pool.push(c.book); stats.sweptBack++; }
   carry = []; customers = [];
   for (const b of pool) {
     if (shelfStock[b.genre].length < capacityOf(b.genre)) shelfStock[b.genre].push(b);
@@ -1278,6 +1281,8 @@ function composeTally() {
     (stats.restockDeclined ? 'You turned down the restock from ' + (stats.restockBy === 'supplier' ? 'the Sleazy Supplier' : 'the Mysterious Man') + ' (' + stats.restockDeclined + ' empty space' + (stats.restockDeclined === 1 ? '' : 's') + ' left bare)<br>' : '') +
     (stats.rentPaid ? '🧥 Rent to the Mysterious Man: <b>−' + stats.rentPaid + ' 🪙</b> cash<br>' : '') +
     'Wasted at closing (no shelf or arm space): <b>' + stats.wasted + '</b> books' + (stats.wasted ? ' worth <b>' + stats.wastedValue + ' 🪙</b> at sale value' : '') + '<br>' +
+    'Taken back from customers at closing: <b>' + stats.sweptBack + '</b> books<br>' +
+    'In your arms overnight: <b>' + carry.length + '</b> books<br>' +
     'Walkouts — waited too long: <b>' + stats.walkWait + '</b><br>' +
     'Walkouts — not in stock: <b>' + stats.walkStock + '</b><br>' +
     'Sellers turned away: <b>' + stats.turnedAway + '</b><br><br>' +
