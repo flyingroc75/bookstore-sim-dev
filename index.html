@@ -113,7 +113,9 @@
   button.primary { background:#8a6d1f; border-color:#e8c87a; font-weight:bold; }
   button:disabled { opacity:.4; cursor:default; }
   #offerVal { font-size:22px; color:#ffd98a; min-width:70px; text-align:center; }
-  #barWrap { position:relative; margin:17px 0 8px; }
+  #barWrap { position:relative; margin:17px 0 20px; }
+  #trueMark { position:absolute; top:19px; transform:translateX(-50%); color:#ffd94a; font-size:11.5px; line-height:1; white-space:nowrap; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+  #trueMark .tt { font-size:11px; }
   #askTri { position:absolute; top:-16px; transform:translateX(-50%); color:#e8c87a; font-size:12px; line-height:1; pointer-events:none; }
   input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:16px; border-radius:8px;
                       background:#5a4326; outline:none; margin:8px 0 2px; }
@@ -166,6 +168,7 @@
     <div id="barWrap">
       <div id="askTri">▼</div>
       <input type="range" id="offerSlider" min="0" step="1" value="0">
+      <div id="trueMark" style="display:none;"><span class="tt">▲</span> <span id="trueLbl"></span></div>
     </div>
     <div class="row" id="haggleButtons">
       <button class="primary" id="offerBtn">Make offer</button>
@@ -782,6 +785,7 @@ function openHaggle(seller) {
   slider.style.backgroundRepeat = 'no-repeat, no-repeat';
   $('haggleRange').textContent = lo + ' – ' + hi + ' coins';
   $('haggleAsk').textContent = seller.ask;
+  $('trueMark').style.display = 'none';   // the true-price marker only appears after a deal
   $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : '';
   $('hagglePanel').style.display = 'block';   // visible before placeAskTri measures the bar
   syncOffer(); placeAskTri();
@@ -839,27 +843,44 @@ $('offerBtn').addEventListener('click', () => {
 $('declineBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) repDown(haggle.seller); if (haggle) closeHaggle('decline'); });
 $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) closeHaggle('dismiss'); });
 
-// After a deal: an overlay card celebrates — but the book's true sell price
-// stays a SURPRISE (Roy, 2026-10-18: "just make it a surprise"). No value, no
-// margin verdict, no marker on the bar: you find out what it fetches when it
-// sells off your shelf. The appraisal band remains the only guidance. A
-// collectible gets one wordless nod: its little icon, no text (Roy).
+// After a deal: the overlay card reveals the book's ACTUAL sale value
+// (count-up) AND a gold marker on the bar shows where the true price sat
+// (Roy, 2026-10-18 — reversing his "surprise" call from earlier the same
+// afternoon: "show the true value. In fact show where it is on the bar").
+// A collectible also gets its icon on the card (Roy's wordless nod, kept).
 let revealTimer = null;
 function showReveal(book, paid) {
+  const tm = $('trueMark');
+  tm.style.left = barX(book.sellPrice);   // the ▲ sits at the true price, in the bar's own geometry
+  $('trueLbl').textContent = 'actually sells for ' + book.sellPrice;
+  tm.style.display = 'block';
+  const margin = book.sellPrice - paid;
   const rev = $('haggleReveal');
   rev.innerHTML = '<div class="card">🤝 Deal! You paid <b>' + paid + '</b> 🪙<br>' +
-    (book.title ? '<div style="font-size:36px; line-height:1.2;">' + (book.icon || '📖') + '</div>' : '') +
-    '<span style="font-size:17px;">It\'s yours! Shelve it and see what it fetches. 🎉</span><br>' +
+    (book.title ? '<div style="font-size:32px; line-height:1.15;">' + (book.icon || '📖') + '</div>' : '') +
+    'The book actually sells for<br>' +
+    '<span class="big" id="revealVal">0</span> 🪙<br>' +
+    '<span style="color:' + (margin >= 0 ? '#8fe08a' : '#e08a8a') + '; font-weight:bold;">' +
+    (margin >= 0 ? 'Margin if it sells: +' + margin + ' 🎉' : 'You overpaid by ' + (-margin) + ' 😬') + '</span><br>' +
     '<button class="primary" id="revealOk" style="margin-top:10px;">Continue</button></div>';
   rev.innerHTML = rev.innerHTML.split('🪙').join(COIN);
   rev.classList.add('pop');
   $('revealOk').addEventListener('click', closeReveal);
+  const t0 = performance.now();
+  const tick = () => {
+    const el = document.getElementById('revealVal'); if (!el) return;
+    const p = Math.min(1, (performance.now() - t0) / 750);
+    el.textContent = Math.round(book.sellPrice * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
   revealTimer = setTimeout(closeReveal, 3200);
 }
 function closeReveal() {
   if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
   const rev = $('haggleReveal');
   rev.classList.remove('pop'); rev.innerHTML = '';
+  $('trueMark').style.display = 'none';
   if (haggle && haggle.dealt) { flash('Bought for ' + haggle.seller.book.cost + ' 🪙'); closeHaggle('deal'); }
   if (pendingColCut) { const c = pendingColCut; pendingColCut = null; openCollections(c); }
 }
