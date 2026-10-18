@@ -114,7 +114,7 @@
   button:disabled { opacity:.4; cursor:default; }
   #offerVal { font-size:22px; color:#ffd98a; min-width:70px; text-align:center; }
   #barWrap { position:relative; margin:17px 0 20px; }
-  #offerTri { position:absolute; top:-16px; transform:translateX(-50%); color:#f3e9d2; font-size:12px; line-height:1; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+  #askTri { position:absolute; top:-16px; transform:translateX(-50%); color:#f3e9d2; font-size:12px; line-height:1; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
   #trueMark { position:absolute; top:19px; transform:translateX(-50%); color:#ffd94a; font-size:11.5px; line-height:1; white-space:nowrap; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
   #trueMark .tt { font-size:11px; }
   input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:16px; border-radius:8px;
@@ -166,7 +166,7 @@
     <p>Seller asks: <b id="haggleAsk"></b> · Their patience is draining…</p>
     <p style="margin-top:10px;" id="offerLine">Your offer: <span id="offerVal">0</span> <span class="coin"></span></p>
     <div id="barWrap">
-      <div id="offerTri">▼</div>
+      <div id="askTri">▼</div>
       <input type="range" id="offerSlider" min="0" step="1" value="0">
       <div id="trueMark" style="display:none;"><span class="tt">▲</span> <span id="trueLbl"></span></div>
     </div>
@@ -777,21 +777,28 @@ function openHaggle(seller) {
   const slider = $('offerSlider');
   const max = Math.max(hi, seller.ask);            // bar runs 0 → top of range or the ask, whichever is higher
   slider.max = max; slider.value = haggle.offer;
-  const pLo = (lo / max * 100).toFixed(1), pHi = (hi / max * 100).toFixed(1);
-  slider.style.background = 'repeating-linear-gradient(45deg, rgba(255,255,255,.13) 0 7px, rgba(255,255,255,0) 7px 14px), linear-gradient(90deg, #5a4326 0%, #5a4326 ' + pLo + '%, #35c4b5 ' + pLo + '%, #35c4b5 ' + pHi + '%, #5a4326 ' + pHi + '%, #5a4326 100%)';   // diagonal stripes over the value bar (Roy, 2026-10-18)
+  const pLoN = lo / max * 100, pHiN = hi / max * 100, pLo = pLoN.toFixed(1), pHi = pHiN.toFixed(1);
+  const bandW = Math.max(0, pHiN - pLoN), bandPos = bandW >= 100 ? 0 : pLoN / (100 - bandW) * 100;
+  slider.style.background = 'repeating-linear-gradient(45deg, rgba(255,255,255,.16) 0 7px, rgba(255,255,255,0) 7px 14px), linear-gradient(90deg, #5a4326 0%, #5a4326 ' + pLo + '%, #35c4b5 ' + pLo + '%, #35c4b5 ' + pHi + '%, #5a4326 ' + pHi + '%, #5a4326 100%)';   // diagonal stripes on the appraisal band ONLY — the brown stays flat (Roy, 2026-10-18)
+  slider.style.backgroundSize = bandW.toFixed(1) + '% 100%, 100% 100%';
+  slider.style.backgroundPosition = bandPos.toFixed(1) + '% 0, 0 0';
+  slider.style.backgroundRepeat = 'no-repeat, no-repeat';
   $('trueMark').style.display = 'none';
   $('haggleRange').textContent = lo + ' – ' + hi + ' coins';
   $('haggleAsk').textContent = seller.ask;
   $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : '';
-  syncOffer();
+  syncOffer(); placeAskTri();
   $('hagglePanel').style.display = 'block';
+}
+function placeAskTri() {   // the ▼ sits on the seller's asking price (Roy, 2026-10-18); it slides when a counter drops the ask
+  const sl = $('offerSlider'), mx = +sl.max || 1;
+  $('askTri').style.left = (haggle ? haggle.seller.ask : 0) / mx * 100 + '%';
 }
 function syncOffer() {
   if (haggle) haggle.offer = +$('offerSlider').value;
   $('offerVal').textContent = haggle ? haggle.offer : 0;
   $('offerBtn').disabled = !haggle || haggle.offer > coins || haggle.offer < 1;
-  const sl = $('offerSlider'), mx = +sl.max || 1;   // the triangle rides above the bar, on the offer (Roy, 2026-10-18)
-  $('offerTri').style.left = (haggle ? haggle.offer : 0) / mx * 100 + '%';
+  // (the offer itself is the slider thumb + the readout; the ▼ triangle marks the ASK — see placeAskTri)
 }
 $('offerSlider').addEventListener('input', syncOffer);
 function closeHaggle(result) {
@@ -823,7 +830,7 @@ $('offerBtn').addEventListener('click', () => {
     }
     s.patience -= 10;
     s.ask = Math.max(s.floor + 3, Math.round((s.ask + offer) / 2));
-    $('haggleAsk').textContent = s.ask;
+    $('haggleAsk').textContent = s.ask; placeAskTri();
     $('haggleMsg').textContent = (offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.') + (haggle.refusals === 2 ? ' ⚠️ One more low offer and they walk!' : '');
     if (s.patience <= 0) { closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s); }
   }
