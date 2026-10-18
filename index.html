@@ -590,15 +590,19 @@ function reset() {
   inheritCat = false;
   if (keptCap >= 9) upgrades.bookcase = true;   // the kept shelves keep their upgraded tier (Roy, 2026-10-17)
   if (keptCap >= 12) upgrades.bookcase2 = true;
+  if (boughtEver.chair) upgrades.chair = true;   // the armchair is FURNITURE (Roy, 2026-10-18): bought once, it stays in the shop across runs like the shelves. (Checkers are staff, not furniture — never kept.)
   upgrades.shelves = Math.max(0, casePlan.length - new Set(casePlan).size);
   marketingActive = false;
   applyUpgrades();
-  // Every kept shelf starts stocked with books worth 25 (flat, like the
-  // original opening stock): each genre filled to its case capacity.
+  // The shelves start from the KEPT inventory (Roy, 2026-10-18): the books
+  // the last run left unsold are still there, values and all — only the
+  // EMPTY spaces are filled with flat-25 books (cost 25, sell 25).
   shelfStock = {};
   for (const g of activeGenres) {
+    const cap = capacityOf(g), kept = (keptStock && keptStock[g]) || [];
     shelfStock[g] = [];
-    for (let i = 0; i < capacityOf(g); i++) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = 25; shelfStock[g].push(b); }
+    for (let i = 0; i < cap; i++) shelfStock[g].push(kept[i] ? Object.assign({}, kept[i]) : null);
+    for (let i = 0; i < cap; i++) if (!shelfStock[g][i]) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = 25; shelfStock[g][i] = b; }
   }
   carry = [];
   customers = [];
@@ -651,12 +655,13 @@ let keptCasePlan = null;   // the shop's case layout (its shelves), kept across 
 let collected = {};        // collection title -> true (persistent meta-progression, Roy 2026-10-16)
 let collectionsDone = {};  // collection id -> true once its completion shards were awarded
 let keptCats = null;       // the cat(s) this run owns, saved at purchase. Inherited ONLY through the ending's Start Over (Roy, 2026-10-17): bankruptcy passes the cat to the next owner, but starting from scratch (page load / refresh) does not. Checkers are never kept.
+let keptStock = null;      // the shop's unsold inventory, captured when a run ends: the next run's shelves start from THESE books, with only the empty spaces filled by flat-25 stock (Roy, 2026-10-18)
 let inheritCat = false;    // armed by the Start Over button; consumed by reset()
 let keptCap = 6;           // the bookcase tier the shelves carry (6/9/12) — kept WITH the shelves across runs (Roy, 2026-10-17: on reset the cases "became not upgraded")
 function saveMeta() { try {
     if (typeof upgrades !== 'undefined' && upgrades && (upgrades.bookcase || upgrades.bookcase2)) keptCap = Math.max(keptCap, upgrades.bookcase2 ? 12 : 9);   // the shelves remember their tier
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, keptCap, collected, collectionsDone })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, keptCap, keptStock, collected, collectionsDone })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; if (d.keptStock) keptStock = d.keptStock; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
 loadMeta();
 function saveRunSnapshot() {
   try {
@@ -671,6 +676,7 @@ function restoreRun(snap) {
   day = snap.day; coins = snap.coins; reputation = snap.reputation;
   upgrades = snap.upgrades; casePlan = snap.casePlan.slice(); keptCasePlan = casePlan.slice();
   keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
+  if (boughtEver.chair) upgrades.chair = true;   // the armchair is furniture — it conveys with the shop (Roy, 2026-10-18)
   shelfStock = snap.shelfStock; carry = snap.carry || [];
   marketingActive = !!snap.marketingActive; marketingTonight = false;
   stats = snap.stats || freshStats(); startNetWorth = snap.startNetWorth || 0; dayStartCoins = snap.dayStartCoins || coins;
@@ -1335,6 +1341,8 @@ function showBankrupt(kind) {
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
 $('startOverBtn').addEventListener('click', () => {
   inheritCat = true;   // the run ended — the next owner inherits the cat (Roy, 2026-10-17)
+  keptStock = JSON.parse(JSON.stringify(shelfStock));   // and the unsold inventory conveys with the shop (Roy, 2026-10-18)
+  saveMeta();
   snapshotArmed = true;
   $('endPanel').style.display = 'none';
   coinFrom = null; coinTo = null; coinLabel = 'Y O U R   C O I N S'; playerLeaving = false; transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
@@ -1518,6 +1526,7 @@ $('upCards').addEventListener('click', e => {
     else upgrades[u.id] = true;
     keptCasePlan = casePlan.slice();
     keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
+  if (boughtEver.chair) upgrades.chair = true;   // the armchair is furniture — it conveys with the shop (Roy, 2026-10-18)
     keptCap = upgrades.bookcase2 ? 12 : upgrades.bookcase ? 9 : 6;
     saveMeta();   // after the purchase lands, so the kept-shelves/cats save is current
   }
@@ -2097,7 +2106,7 @@ $('newGameBtn').addEventListener('click', () => {
   if (hasContinue && !wipeArmed) { wipeArmed = true; $('newGameBtn').textContent = 'Erase save & start fresh?'; return; }
   wipeArmed = false;
   shards = 0; unlocked = {}; boughtEver = {}; collected = {}; collectionsDone = {};
-  keptCasePlan = null; keptCap = 6; keptCats = null; inheritCat = false;
+  keptCasePlan = null; keptCap = 6; keptCats = null; keptStock = null; inheritCat = false;
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   storySeen = false;
   titleOpen = false;
