@@ -1602,10 +1602,7 @@ function drawOutside() {
   ctx.beginPath(); ctx.moveTo(150, 562); ctx.bezierCurveTo(155, 559, 160, 559, 163, 560.5); ctx.lineTo(163, 570); ctx.bezierCurveTo(160, 568.5, 155, 568.5, 150, 571); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(90,67,38,.55)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(140, 563.5); ctx.lineTo(147, 562.5); ctx.moveTo(140, 566.5); ctx.lineTo(147, 565.5); ctx.moveTo(153, 562.5); ctx.lineTo(160, 563.5); ctx.moveTo(153, 565.5); ctx.lineTo(160, 566.5); ctx.stroke();
-  // 'BOOKS' painted to FIT the board: unspaced, shrunk until it fits the face
-  let signFs = 9; ctx.font = 'bold ' + signFs + 'px Georgia';
-  while (signFs > 5 && ctx.measureText('BOOKS').width > 34) { signFs -= 0.5; ctx.font = 'bold ' + signFs + 'px Georgia'; }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#5a4326'; ctx.fillText('BOOKS', 150, 582.5);
+  // no lettering on the board at all (Roy, 2026-10-17) — just the painted open book
   // chalk arrows on the pavement, pointing at the door — dusty, hand-drawn double strokes
   ctx.strokeStyle = 'rgba(240,230,205,.45)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
   for (const [ax, ay] of [[300, 570], [398, 583], [486, 566]]) {
