@@ -279,6 +279,15 @@ function buildCases() {
   OBSTACLES.length = 0; OBSTACLES.push(...cases, BUY_COUNTER, SELL_COUNTER);
 }
 function casesOf(g) { return cases.filter(c => c.genre === g); }
+// Shelves are SLOTS now (Roy, 2026-10-17): a customer takes a RANDOM book
+// and its slot stays empty — the other books don't shuffle along; shelving
+// puts a book in a RANDOM empty slot. shelfStock[g] is a fixed-length slot
+// array (book or null), indexed across the genre's cases.
+function stockCount(g) { const a = shelfStock[g] || []; let n = 0; for (const b of a) if (b) n++; return n; }
+function emptySlotIdx(g) { const a = shelfStock[g] || []; const out = []; for (let i = 0; i < capacityOf(g); i++) if (!a[i]) out.push(i); return out; }
+function takeRandomBook(g) { const a = shelfStock[g]; if (!a) return null; const filled = []; for (let i = 0; i < a.length; i++) if (a[i]) filled.push(i); if (!filled.length) return null; const i = filled[Math.floor(Math.random() * filled.length)]; const b = a[i]; a[i] = null; return b; }
+function shelveBook(g, b) { const es = emptySlotIdx(g); if (!es.length) return false; shelfStock[g][es[Math.floor(Math.random() * es.length)]] = b; return true; }
+function normalizeSlots() { for (const g of activeGenres) { if (!shelfStock[g]) shelfStock[g] = []; while (shelfStock[g].length < capacityOf(g)) shelfStock[g].push(null); } }
 function firstCase(g) { return casesOf(g)[0] || { x: 36, y: 40, w: 108, h: caseHeight() }; }
 function caseCap() { return upgrades.bookcase2 ? 12 : upgrades.bookcase ? 9 : 6; }
 function capacityOf(g) { return casesOf(g).length * caseCap(); }
@@ -570,7 +579,7 @@ function reset() {
   shelfStock = {};
   for (const g of activeGenres) {
     shelfStock[g] = [];
-    while (shelfStock[g].length < capacityOf(g)) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = 25; shelfStock[g].push(b); }
+    for (let i = 0; i < capacityOf(g); i++) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = 25; shelfStock[g].push(b); }
   }
   carry = [];
   customers = [];
@@ -578,7 +587,7 @@ function reset() {
   stats = freshStats();
   day = 1; dayStartCoins = coins;
   reputation = 25;   // new run: reputation NEVER carries (Roy, 2026-10-17: on bankruptcy only furniture and the cat are carried forward — supersedes the 2026-10-16 carry-over rule)
-  startNetWorth = coins + Object.values(shelfStock).flat().reduce((a, b) => a + (b.cost || 0), 0);
+  startNetWorth = coins + Object.values(shelfStock).flat().filter(Boolean).reduce((a, b) => a + (b.cost || 0), 0);
   player = { x: 480, y: 385, speed: 235 * SPEED_MULT, target: null };
   document.getElementById('tallyPanel').style.display = 'none';
   document.getElementById('hagglePanel').style.display = 'none';
@@ -721,9 +730,9 @@ function doInteract() {
     const g = st.slice(6);
     const before = carry.length;
     let moved = 0;
-    carry = carry.filter(bk => { if (bk.genre === g && shelfStock[g].length < capacityOf(g)) { shelfStock[g].push(bk); moved++; return false; } return true; });
+    carry = carry.filter(bk => { if (bk.genre === g && shelveBook(g, bk)) { moved++; return false; } return true; });
     if (moved) { sfx('thunk'); }   // no 'Stocked X' text anymore (Roy, 2026-10-17) — the thunk says it
-    else if (before) flash(GENRE_NAME[g] + ' shelf is full!');
+    else if (before && carry.some(bk => bk.genre === g)) flash(GENRE_NAME[g] + ' shelf is full!');
   }
 }
 
@@ -991,14 +1000,14 @@ function update(dt) {
         const pos = shelfSpot(c.genre, shelfWaiters[c.genre]++);
         const arrived = moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
         if (arrived) {
-          if (shelfStock[c.genre].length > 0) { c.book = shelfStock[c.genre].shift(); c.state = 'toSell'; }
+          if (stockCount(c.genre) > 0) { c.book = takeRandomBook(c.genre); c.state = 'toSell'; }
           else c.state = 'waitShelf';
         }
       } else if (c.state === 'waitShelf') {
         if (upgrades.chair && !c.chairSeat && !customers.some(o => o !== c && o.chairSeat)) c.chairSeat = true;   // claim the Comfy Chair
         const pos = c.chairSeat ? { x: CHAIR.x, y: CHAIR.y + 30 } : shelfSpot(c.genre, shelfWaiters[c.genre]++);
         moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
-        if (shelfStock[c.genre].length > 0) { c.book = shelfStock[c.genre].shift(); c.chairSeat = false; c.state = 'toSell'; }
+        if (stockCount(c.genre) > 0) { c.book = takeRandomBook(c.genre); c.chairSeat = false; c.state = 'toSell'; }
         else { const seated = c.chairSeat && Math.hypot(c.x - pos.x, c.y - pos.y) < 12; drainPatience(c, seated ? 0.8 : 3.2, dt); if (c.patience <= 0) { c.state = 'leaveMad'; stats.walkStock++; repDown(c); } }
       } else if (c.state === 'toSell') {
         const idx = sq.indexOf(c);
@@ -1006,7 +1015,8 @@ function update(dt) {
         moveToward(c, pos.x, pos.y, 125 * SPEED_MULT, dt);
         drainPatience(c, 1.5, dt);
         if (c.patience <= 0) { // leaves, book goes back on the shelf
-          shelfStock[c.genre].push(c.book); c.book = null; c.state = 'leaveMad'; stats.walkWait++; repDown();
+          if (shelveBook(c.genre, c.book)) { c.book = null; c.state = 'leaveMad'; stats.walkWait++; repDown(); }
+          else c.patience = c.maxPatience * 0.45;   // no empty slot to put it back in — he buys it after all
         }
       }
     }
@@ -1053,8 +1063,8 @@ function applyUpgrades() {
   SHELF_CAP = caseCap();
   SHELF_TIERS = (upgrades.bookcase || upgrades.bookcase2) ? 3 : 2;
   activeGenres = ALL_GENRES.filter(g => g === 'green' || g === 'purple' || upgrades[g]);
-  if (shelfStock) for (const g of activeGenres) if (!shelfStock[g]) shelfStock[g] = [];
   buildCases();
+  if (shelfStock) normalizeSlots();   // AFTER buildCases: capacityOf reads the built cases, so slot arrays size to the new layout (incl. a case bought last night)
   if (player) player.speed = 235 * SPEED_MULT * (upgrades.speed2 ? 1.4 : upgrades.speed ? 1.2 : 1);
   resetCats();
   checkerT = 0;
@@ -1067,7 +1077,7 @@ function startNextDay() {
   customers = []; dayT = 0; spawnT = 1.2; over = false; haggle = null;
   stats = freshStats();
   dayStartCoins = coins;
-  startNetWorth = coins + Object.values(shelfStock).flat().concat(carry).reduce((a, b) => a + (b.cost || 0), 0);
+  startNetWorth = coins + Object.values(shelfStock).flat().filter(Boolean).concat(carry).reduce((a, b) => a + (b.cost || 0), 0);
   player.x = 480; player.y = 385; player.target = null;
   $('tallyPanel').style.display = 'none';
   $('upgradesPanel').style.display = 'none';
@@ -1111,14 +1121,14 @@ function endDay() {
   for (const c of customers) if (c.kind === 'buyer' && c.book) { pool.push(c.book); stats.sweptBack++; }
   carry = []; customers = [];
   for (const b of pool) {
-    if (shelfStock[b.genre].length < capacityOf(b.genre)) shelfStock[b.genre].push(b);
+    if (shelveBook(b.genre, b)) { /* random empty slot */ }
     else if (carry.length < CARRY_MAX) carry.push(b);
     else { stats.wasted++; stats.wastedValue += b.sellPrice; }
   }
   // The Mysterious Man's restock offer: if even ONE slot is empty at close,
   // he offers to fill every empty slot at 30 a book — books that sell for 25.
   // He appears BEFORE the tally so the numbers include the deal.
-  const shelfTotal = activeGenres.reduce((a, g) => a + shelfStock[g].length, 0);
+  const shelfTotal = activeGenres.reduce((a, g) => a + stockCount(g), 0);
   const emptySlots = activeGenres.reduce((a, g) => a + capacityOf(g), 0) - shelfTotal;
   if (emptySlots > 0) {   // the offer ALWAYS comes if even one slot is empty (Roy)
     // Owning the Sleazy Supplier SWAPS your supplier: his nightly restock is
@@ -1146,7 +1156,7 @@ $('restockYes').addEventListener('click', () => {
   coins -= pendingRestock.total; refreshHUD();
   stats.restocked = pendingRestock.empty; stats.restockCost = pendingRestock.total;
   for (const g of activeGenres)
-    while (shelfStock[g].length < capacityOf(g)) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = pendingRestock.perBook; shelfStock[g].push(b); }
+    while (stockCount(g) < capacityOf(g)) { const b = makeBook(g, false); b.sellPrice = 25; b.cost = pendingRestock.perBook; if (!shelveBook(g, b)) break; }
   pendingRestock = null;
   $('restockPanel').style.display = 'none';
   proceedAfterRestock();
@@ -1269,7 +1279,7 @@ function updateEnding(dt) {
 
 function composeTally() {
   const profit = coins - dayStartCoins;
-  const leftBooks = Object.values(shelfStock).flat().concat(carry);
+  const leftBooks = Object.values(shelfStock).flat().filter(Boolean).concat(carry);
   const invValue = leftBooks.reduce((a, b) => a + (b.cost || 0), 0);   // inventory at cost → Δ net worth = profit
   const invBoughtCost = leftBooks.reduce((a, b) => a + (b.cost || 0), 0);
   const netWorth = coins + invValue, nwDelta = netWorth - startNetWorth;
@@ -1661,6 +1671,7 @@ function draw() {
     const PER_TIER = caseCap() / SHELF_TIERS;
     const ci = casesOf(g).indexOf(s);
     shelfStock[g].slice(ci * caseCap(), (ci + 1) * caseCap()).forEach((b, i) => {
+      if (!b) return;   // empty slot — the neighbours stay put (Roy, 2026-10-17)
       const tier = Math.floor(i / PER_TIER), slot = i % PER_TIER;
       const surfY = s.y + (tier + 1) * tierH + (tier === tiers - 1 ? 3 : 0);                  // standing surface
       const bh = 34 + ((i * 37) % 8), bw = 24;
