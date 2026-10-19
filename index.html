@@ -116,8 +116,8 @@
   button:disabled { opacity:.4; cursor:default; }
   #offerVal { font-size:22px; color:#ffd98a; min-width:70px; text-align:center; }
   #haggleHearts { vertical-align:middle; }
-  .hrt { font-size:17px; line-height:1; vertical-align:middle; margin-right:2px; color:#ffd94a; }
-  .hrt.off { color:transparent; -webkit-text-stroke:1.4px #ffd94a; }   /* same glyph, hollow — so full and empty hearts are exactly the same size (Roy, 2026-10-18) */
+  .hrt { display:inline-block; width:17px; height:17px; vertical-align:middle; margin-right:3px; }
+  .hrt svg { display:block; width:100%; height:100%; }   /* hearts are inline SVG now — one path, filled or hollowed (Roy, 2026-10-18: font glyphs never matched; the empty ones must be the flat ones, hollowed out) */
   #patWrap { display:inline-block; width:130px; height:9px; background:#3a2c20; border-radius:5px; vertical-align:middle; overflow:hidden; }
   #patBar { display:block; height:100%; width:100%; background:#58c472; }
   #barWrap { position:relative; margin:17px 0 20px; }
@@ -908,7 +908,9 @@ $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) c
 
 function renderHaggleMeta(s) {   // Roy (2026-10-18): no refusal TEXT — strikes are hearts that empty, and the seller's patience is shown, live
   const left = Math.max(0, 3 - (s.refusals || 0));
-  $('haggleHearts').innerHTML = '<span class="hrt">♥\uFE0E</span>'.repeat(left) + '<span class="hrt off">♥\uFE0E</span>'.repeat(3 - left);   // flat yellow hearts; empty = the SAME glyph hollowed by a yellow text-stroke, so all three match in size and sit in line with the patience bar (Roy, 2026-10-18)
+  const heartPath = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+  const heartSVG = off => '<span class="hrt"><svg viewBox="0 0 24 24"><path d="' + heartPath + '" fill="' + (off ? 'none' : '#ffd94a') + '"' + (off ? ' stroke="#ffd94a" stroke-width="1.7"' : '') + '/></svg></span>';
+  $('haggleHearts').innerHTML = heartSVG(false).repeat(left) + heartSVG(true).repeat(3 - left);
   const f = Math.max(0, Math.min(1, s.patience / (s.maxPatience || 100)));
   $('patBar').style.width = (f * 100).toFixed(0) + '%';
   $('patBar').style.background = f > 0.5 ? '#58c472' : f > 0.25 ? '#e8b64c' : '#e05a4c';
