@@ -300,7 +300,23 @@ const SLOT_POS = [ { x: 36, y: 40 }, { x: 816, y: 40 },
 let cases = [];                          // built by buildCases(): {genre,x,y,w,h}
 function caseHeight() { return (upgrades.bookcase || upgrades.bookcase2) ? 174 : 116; }
 function buildCases() {
-  cases = casePlan.map((g, i) => ({ genre: g, x: SLOT_POS[i].x, y: SLOT_POS[i].y, w: 108, h: caseHeight() }));
+  // Cases CLUSTER by genre (Roy, 2026-10-18): non-fiction grows from the
+  // left wall, fiction (purple) grows from the right, poetry and comics
+  // fill the middle in that order — a genre's shelves are never scattered
+  // among another genre's.
+  const A = { x: 36, y: 40 }, B = { x: 176, y: 40 }, C = { x: 316, y: 40 }, D = { x: 456, y: 40 }, E = { x: 596, y: 40 }, F = { x: 816, y: 40 }, G = { x: 316, y: 246 }, H = { x: 596, y: 246 };
+  const leftList = [A, B, C, D], rightList = [F, E, D, C], spill = [G, H];
+  const left = ['green', 'poetry'].flatMap(g => casePlan.filter(x => x === g));
+  const right = ['purple', 'comics'].flatMap(g => casePlan.filter(x => x === g));
+  const used = new Set(); cases = [];
+  const place = (g, list) => {
+    for (const sl of list.concat(spill, SLOT_POS)) {
+      const k = sl.x + ',' + sl.y;
+      if (!used.has(k)) { used.add(k); cases.push({ genre: g, x: sl.x, y: sl.y, w: 108, h: caseHeight() }); return; }
+    }
+  };
+  left.forEach(g => place(g, leftList));
+  right.forEach(g => place(g, rightList));
   OBSTACLES.length = 0; OBSTACLES.push(...cases, BUY_COUNTER, SELL_COUNTER);
 }
 function casesOf(g) { return cases.filter(c => c.genre === g); }
@@ -552,7 +568,7 @@ function noteCollectionPurchase(book) {
 }
 function updateColCount() { const n = Object.keys(collected).length; const el = $('colCount'); if (el) el.textContent = n + '/100'; const h = $('colHeadCount'); if (h) h.textContent = '— ' + n + '/100'; }
 function renderCollections(highlightTitle, banner) {
-  $('colBanner').textContent = banner || '';
+  $('colBanner').innerHTML = banner || '';   // the banner carries drawn-icon markup now (Roy, 2026-10-18: it printed raw <svg> text when set as text)
   let html = '';
   for (const c of COLLECTIONS) {
     const got = c.books.filter(([t]) => collected[t]).length;
