@@ -151,16 +151,16 @@
 </style>
 </head>
 <body>
-<h1>📚 Bookstore Sim — Prototype</h1>
+<h1><span id="h1Book"></span> Bookstore Sim — Prototype</h1>
 <div id="hud">
   <span><span class="coin"></span> <b id="coins">200</b></span>
   <span id="shardBox">✦ <b id="shards">0</b></span>
-  <span>📅 <b id="dayNum">Day 1</b></span>
-  <span>⏳ <b id="clock">3:30</b></span>
-  <span id="repBox"><b id="repFace">😐</b> <b id="rep">25</b></span>
+  <span><span id="dayIc"></span> <b id="dayNum">Day 1</b></span>
+  <span><span id="clockIc"></span> <b id="clock">3:30</b></span>
+  <span id="repBox"><b id="repFace"></b> <b id="rep">25</b></span>
   <span id="goodwillBox" title="Goodwill: happy customers restore a slot; angry customers take one away"><span id="goodwillSlots"><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span></span></span>
-  <span><button id="musicBtn" style="padding:4px 10px; font-size:13px;">🔊 Music on</button></span>
-  <span><button id="colBtn" style="padding:4px 10px; font-size:13px;">📚 <b id="colCount">0/100</b></button></span>
+  <span><button id="musicBtn" style="padding:4px 10px; font-size:13px;">Music on</button></span>
+  <span><button id="colBtn" style="padding:4px 10px; font-size:13px;"><span id="colIc"></span> <b id="colCount">0/100</b></button></span>
   <span id="buildTag" style="opacity:.55; font-size:11px;"></span>
 </div>
 <div id="wrap">
@@ -189,7 +189,7 @@
   </div>
 
   <div class="panel storybar" id="restockPanel" style="display:none;">
-    <h2>🚪 A knock at the door…</h2>
+    <h2><span class="doorIc"></span> A knock at the door…</h2>
     <p id="restockBody"></p>
     <div class="row"><button class="primary" id="restockYes">Deal</button><button id="restockNo">No thanks</button></div>
   </div>
@@ -203,20 +203,20 @@
   <div class="panel" id="upgradesPanel" style="display:none; width:700px; max-width:94%;">
     <div class="uphead">
       <div class="titlerow"><h2>🌙 Night Market</h2><button class="primary" id="nextDayBtn">Open next day ▸</button></div>
-      <div style="margin-top:4px; font-size:15px; color:#e8c87a;">🪙 <span id="upCoins">0</span> &nbsp;·&nbsp; ✦ <span id="upShards">0</span> &nbsp;·&nbsp; <span id="upRepFace">😐</span> <span id="upRep">25</span></div>
+      <div style="margin-top:4px; font-size:15px; color:#e8c87a;"><span class="coinIc"></span> <span id="upCoins">0</span> &nbsp;·&nbsp; ✦ <span id="upShards">0</span> &nbsp;·&nbsp; <span id="upRepFace"></span> <span id="upRep">25</span></div>
     </div>
     <div id="upScroll"><div class="upcards" id="upCards"></div></div>
     <div id="upPop"><div class="popcard"><button id="upPopClose">✕</button><div class="popicon" id="upPopIcon"></div><h3 id="upPopName"></h3><p id="upPopDesc"></p><p class="popstatus" id="upPopStatus"></p></div></div>
   </div>
 
   <div class="panel storybar" id="rentPanel" style="display:none;">
-    <h2>🚪 A knock at the door…</h2>
+    <h2><span class="doorIc"></span> A knock at the door…</h2>
     <p id="rentBody"></p>
     <div class="row"><button class="primary" id="rentPay">Pay the rent</button><button id="rentFace" style="display:none;">Face the music…</button></div>
   </div>
 
   <div class="panel storybar" id="winPanel" style="display:none;">
-    <h2 id="winTitle">🎉 Survived week!</h2>
+    <h2 id="winTitle">Survived week!</h2>
     <p>Rent paid in cash. The Mysterious Man tips his hat and vanishes into the night — the shop is yours for another week.</p>
     <div class="row"><button class="primary" id="winOk">Keep going ▸</button></div>
   </div>
@@ -228,7 +228,7 @@
   </div>
 
   <div class="panel storybar" id="endPanel" style="display:none;">
-    <h2>🔄 The cycle continues</h2>
+    <h2><span id="cycleIc"></span> The cycle continues</h2>
     <p>Somewhere, a well-meaning soul is about to have a very educational week.</p>
     <div class="row"><button class="primary" id="startOverBtn">Start over</button></div>
   </div>
@@ -365,7 +365,7 @@ function happyCustomer(c) {
   reputation = Math.min(100, reputation + 1);
   gainGoodwill();   // a goodwill slot comes back only when reputation actually goes up (Roy, 2026-10-18)
   refreshHUD(); sfx('boop'); hudPop('repBox', 'hudgood');
-  if (c) { floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' }); floaters.push({ x: c.x + 14, y: c.y - 62, t: 0, arrow: 'up' }); bursts.push(makeBurst(c.x, c.y - 30, '#7dd87d', '✚')); }
+  if (c) { floaters.push({ x: c.x, y: c.y - 48, t: 0, face: true }); floaters.push({ x: c.x + 14, y: c.y - 62, t: 0, arrow: 'up' }); bursts.push(makeBurst(c.x, c.y - 30, '#7dd87d', '✚')); }
 }
 // ---------- Drama pass (Roy, 2026-10-17): shard gains and rep swings
 // should FEEL like events — flying shards, bursts, glows, HUD pops, shake.
@@ -374,6 +374,64 @@ function makeBurst(x, y, color, glyph) {
   const ps = [];
   for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 + rf(-0.2, 0.2); ps.push({ x, y, vx: Math.cos(a) * rf(28, 74), vy: Math.sin(a) * rf(28, 74) - 22, t: 0, color, glyph: i % 3 === 0 ? glyph : '✦' }); }
   return { ps };
+}
+
+// ============ drawn icons, no emoji (Roy, 2026-10-18) ============
+// Every pictorial mark in the game is drawn in the game's own flat style:
+// inline SVG for the DOM (em-sized, so it sits in text like a glyph) and
+// canvas paths in the world. The Night Market's upgrade art set the style.
+const svgIc = inner => '<svg viewBox="0 0 24 24" style="width:1.12em;height:1.12em;vertical-align:-0.16em" aria-hidden="true">' + inner + '</svg>';
+const faceBase = inner => svgIc('<circle cx="12" cy="12" r="9.2" fill="#ffd94a" stroke="#b8860b" stroke-width="1.7"/>' + inner);
+const dotEyes = '<circle cx="8.6" cy="10.4" r="1.2" fill="#26221f"/><circle cx="15.4" cy="10.4" r="1.2" fill="#26221f"/>';
+const ICO = {
+  coin: svgIc('<circle cx="12" cy="12" r="9" fill="#ffd94a" stroke="#b8860b" stroke-width="2"/><circle cx="12" cy="12" r="4.6" fill="none" stroke="#b8860b" stroke-width="1.6"/>'),
+  calendar: svgIc('<rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="#f2e3bb" stroke="#5a4326" stroke-width="1.8"/><rect x="3.5" y="5.5" width="17" height="4.6" fill="#c0392b"/><rect x="7.6" y="3" width="2.6" height="4.6" rx="1.2" fill="#5a4326"/><rect x="13.8" y="3" width="2.6" height="4.6" rx="1.2" fill="#5a4326"/><circle cx="8.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="12.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="16.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="8.4" cy="17.6" r="1.25" fill="#5a4326"/><circle cx="12.4" cy="17.6" r="1.25" fill="#5a4326"/>'),
+  clock: svgIc('<circle cx="12" cy="12" r="9" fill="#f2e3bb" stroke="#5a4326" stroke-width="2"/><path d="M12 7.5 V12 L15.2 14.2" stroke="#5a4326" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+  book: svgIc('<path d="M5 4.5 C7.5 3.2 10 3.4 12 5.2 C14 3.4 16.5 3.2 19 4.5 V19 C16.5 17.8 14 18 12 19.6 C10 18 7.5 17.8 5 19 Z" fill="#7a3a8c" stroke="#3c2340" stroke-width="1.6"/><path d="M12 5.2 V19.6" stroke="#3c2340" stroke-width="1.4"/>'),
+  speaker: svgIc('<path d="M4 9.6 v4.8 h3 L12 19 V5 L7 9.6 Z" fill="#e8c87a" stroke="#8a6d1f" stroke-width="1.3"/><path d="M15 9.4 a4.2 4.2 0 0 1 0 5.2 M17.6 7 a7.8 7.8 0 0 1 0 10" stroke="#e8c87a" stroke-width="1.8" fill="none" stroke-linecap="round"/>'),
+  speakerOff: svgIc('<path d="M4 9.6 v4.8 h3 L12 19 V5 L7 9.6 Z" fill="#9a8f7a" stroke="#5a5344" stroke-width="1.3"/><path d="M15.4 9.8 L20.4 14.8 M20.4 9.8 L15.4 14.8" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>'),
+  moon: svgIc('<path d="M19.8 15.6 A8.6 8.6 0 1 1 8.4 4.2 A6.8 6.8 0 0 0 19.8 15.6Z" fill="#ffd94a" stroke="#b8860b" stroke-width="1.4"/>'),
+  receipt: svgIc('<path d="M6 3 h12 v18 l-2-1.4 L14 21 l-2-1.4 L10 21 l-2-1.4 L6 21 Z" fill="#f7f1de" stroke="#8a8474" stroke-width="1.5"/><path d="M8.8 8h6.4 M8.8 11.4h6.4 M8.8 14.8h4" stroke="#8a8474" stroke-width="1.5" stroke-linecap="round"/>'),
+  tombstone: svgIc('<path d="M5 20.4 V11 a7 7 0 0 1 14 0 v9.4 Z" fill="#b9b3a4" stroke="#6e685c" stroke-width="1.6"/><path d="M8.6 10.6 h6.8 M9.4 13.8 h5.2" stroke="#6e685c" stroke-width="1.5" stroke-linecap="round"/><rect x="3.2" y="20.2" width="17.6" height="1.9" rx="0.8" fill="#6e685c"/>'),
+  money: svgIc('<path d="M5.2 6.8 C3.8 5 2.4 4.6 1.4 5.4 C2.2 7.2 3.6 7.6 5.2 6.8Z M18.8 6.8 C20.2 5 21.6 4.6 22.6 5.4 C21.8 7.2 20.4 7.6 18.8 6.8Z" fill="#f2e3bb" stroke="#8a8474" stroke-width="1.1"/><g transform="rotate(-8 12 12.6)"><rect x="4" y="8.2" width="16" height="8.8" rx="1.2" fill="#8fce7e" stroke="#3f7a3a" stroke-width="1.6"/><circle cx="12" cy="12.6" r="2.5" fill="#f2e3bb" stroke="#3f7a3a" stroke-width="1.2"/></g>'),
+  flame: svgIc('<path d="M12 2.6 C14.2 6.8 17.2 9.4 17.2 13.4 A5.2 5.2 0 0 1 6.8 13.4 C6.8 10.2 9.2 7.8 10.4 5.4 C10.9 7 11.8 7.7 12.6 8 C12.2 6 11.9 4.2 12 2.6Z" fill="#f07d24"/><path d="M12 21.2 A3.1 3.1 0 0 1 8.9 18.1 C8.9 16.2 10.5 15 12 13.4 C13.5 15 15.1 16.2 15.1 18.1 A3.1 3.1 0 0 1 12 21.2Z" fill="#ffd94a"/>'),
+  cycle: svgIc('<path d="M6.4 9 A7.4 7.4 0 0 1 18.4 6.2" stroke="#35c4b5" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M19.6 2.6 L18.8 7.2 L14.8 5.4 Z" fill="#35c4b5"/><path d="M17.6 15 A7.4 7.4 0 0 1 5.6 17.8" stroke="#35c4b5" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M4.4 21.4 L5.2 16.8 L9.2 18.6 Z" fill="#35c4b5"/>'),
+  door: svgIc('<rect x="6" y="3" width="12" height="18" fill="#8a5a34" stroke="#5a3a22" stroke-width="1.8"/><rect x="8.4" y="5.6" width="7.2" height="5.2" fill="none" stroke="#5a3a22" stroke-width="1.3"/><rect x="8.4" y="13.2" width="7.2" height="5.2" fill="none" stroke="#5a3a22" stroke-width="1.3"/><circle cx="15.4" cy="12.2" r="1.15" fill="#ffd94a"/>'),
+  shades: svgIc('<rect x="2.8" y="8" width="8" height="6.4" rx="2.6" fill="#26221f"/><rect x="13.2" y="8" width="8" height="6.4" rx="2.6" fill="#26221f"/><path d="M10.6 10.2 Q12 8.8 13.4 10.2" stroke="#26221f" stroke-width="1.8" fill="none"/>'),
+  basket: svgIc('<path d="M5 10.5 h14 l-1.6 8.6 a2 2 0 0 1-2 1.6 H8.6 a2 2 0 0 1-2-1.6 Z" fill="#c98d4b" stroke="#7a5326" stroke-width="1.6"/><path d="M8 10.5 C8 6.6 9.8 4.4 12 4.4 C14.2 4.4 16 6.6 16 10.5" fill="none" stroke="#7a5326" stroke-width="1.8"/><path d="M8.8 14.4 h6.4 M9.6 17.4 h4.8" stroke="#7a5326" stroke-width="1.3" stroke-linecap="round"/>'),
+  deal: svgIc('<path d="M2.2 6.2 L9.2 9.4 L7.4 14.2 L2.2 12 Z" fill="#7a9e43"/><path d="M21.8 6.2 L14.8 9.4 L16.6 14.2 L21.8 12 Z" fill="#7a3a8c"/><path d="M8.8 10.4 Q12 8.8 15.2 10.4 L16.6 14.8 Q12 19 7.4 14.8 Z" fill="#e8b48c" stroke="#b98a5e" stroke-width="1.2"/>'),
+  party: svgIc('<path d="M12 2.8 L13.6 8.4 L19.4 8.6 L14.9 12 L16.4 17.6 L12 14.5 L7.6 17.6 L9.1 12 L4.6 8.6 L10.4 8.4 Z" fill="#ffd94a" stroke="#b8860b" stroke-width="1.2"/><circle cx="4.8" cy="18.8" r="1.25" fill="#35c4b5"/><circle cx="19.2" cy="18.8" r="1.25" fill="#e06868"/><circle cx="12" cy="20.6" r="1.1" fill="#7a9e43"/>'),
+  faceGrin: faceBase('<path d="M6.6 10.6 Q8.1 8.8 9.6 10.6 M14.4 10.6 Q15.9 8.8 17.4 10.6" stroke="#26221f" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M7.4 13.6 A4.9 4.9 0 0 0 16.6 13.6 Z" fill="#7a2d20"/>'),
+  faceSmile: faceBase(dotEyes + '<path d="M8 13.8 Q12 16.8 16 13.8" stroke="#26221f" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+  faceFlat: faceBase(dotEyes + '<path d="M8.4 15.2 H15.6" stroke="#26221f" stroke-width="1.6" stroke-linecap="round"/>'),
+  faceSad: faceBase(dotEyes + '<path d="M8 16.4 Q12 13.6 16 16.4" stroke="#26221f" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+  faceAngry: faceBase('<path d="M6.4 7.6 L10 9.4 M17.6 7.6 L14 9.4" stroke="#26221f" stroke-width="1.7" stroke-linecap="round"/><circle cx="8.4" cy="11.6" r="1.15" fill="#26221f"/><circle cx="15.6" cy="11.6" r="1.15" fill="#26221f"/><path d="M8.2 17 Q12 14.6 15.8 17" stroke="#26221f" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+  faceGrimace: faceBase(dotEyes + '<rect x="7.6" y="14" width="8.8" height="3.4" rx="1.2" fill="#ffffff" stroke="#26221f" stroke-width="1.2"/><path d="M12 14 v3.4 M9.9 14 v3.4 M14.1 14 v3.4" stroke="#26221f" stroke-width="0.9"/>'),
+  faceSkull: svgIc('<path d="M12 3.2 C7.6 3.2 4.8 6.5 4.8 10.5 C4.8 13 5.9 14.8 7.6 15.9 V19 a1.6 1.6 0 0 0 1.6 1.6 h5.6 A1.6 1.6 0 0 0 16.4 19 v-3.1 c1.7-1.1 2.8-2.9 2.8-5.4 C19.2 6.5 16.4 3.2 12 3.2Z" fill="#e8e0cc" stroke="#8a8474" stroke-width="1.5"/><circle cx="8.9" cy="11.3" r="1.9" fill="#26221f"/><circle cx="15.1" cy="11.3" r="1.9" fill="#26221f"/><path d="M12 13.7 L13.2 16.1 H10.8 Z" fill="#26221f"/><path d="M9.7 18.3 V19.9 M12 18.5 V20.1 M14.3 18.3 V19.9" stroke="#8a8474" stroke-width="1.2"/>')
+};
+const ic = n => ICO[n] || '';
+ICO.hat = svgIc('<path d="M7.2 13.4 a4.8 3.8 0 0 1 9.6 0 Z" fill="#3a3a44"/><rect x="2.6" y="13.2" width="18.8" height="2.1" rx="1" fill="#26262e"/><rect x="7.2" y="11.8" width="9.6" height="1.7" fill="#8a2f2a"/>');
+const repFaceIc = () => ic(reputation <= 0 ? 'faceSkull' : reputation >= 40 ? 'faceGrin' : reputation >= 30 ? 'faceSmile' : reputation >= 18 ? 'faceFlat' : reputation >= 8 ? 'faceSad' : 'faceAngry');
+const HEART_D = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+const HEART_PATH = new Path2D(HEART_D);
+// canvas marks in the same language
+function drawHeartC(x, y, s, color) { ctx.save(); ctx.translate(x - s / 2, y - s / 2); ctx.scale(s / 24, s / 24); ctx.fillStyle = color; ctx.fill(HEART_PATH); ctx.restore(); }
+function drawAngerC(x, y, s, color) {   // the 💢, drawn: four red lobes
+  ctx.save(); ctx.translate(x, y); ctx.fillStyle = color;
+  for (let k = 0; k < 4; k++) { ctx.save(); ctx.rotate(Math.PI / 4 + k * Math.PI / 2); ctx.beginPath(); ctx.ellipse(0, -s * 0.36, s * 0.17, s * 0.31, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  ctx.restore();
+}
+function drawStar4C(x, y, s, color) {   // ✦ as a path
+  const q = s * 0.16; ctx.save(); ctx.translate(x, y); ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(0, -s); ctx.quadraticCurveTo(q, -q, s, 0); ctx.quadraticCurveTo(q, q, 0, s); ctx.quadraticCurveTo(-q, q, -s, 0); ctx.quadraticCurveTo(-q, -q, 0, -s); ctx.fill(); ctx.restore();
+}
+function drawPlusC(x, y, s, color) { ctx.save(); ctx.translate(x, y); ctx.fillStyle = color; const w = s * 0.36; ctx.fillRect(-w / 2, -s, w, s * 2); ctx.fillRect(-s, -w / 2, s * 2, w); ctx.restore(); }
+function drawSmileyC(x, y, r) {   // the 😊 rep-gain floater, drawn
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffd94a'; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = '#b8860b'; ctx.stroke();
+  ctx.strokeStyle = '#26221f'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x - r * 0.37, y - r * 0.05, r * 0.21, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + r * 0.37, y - r * 0.05, r * 0.21, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y + r * 0.05, r * 0.52, Math.PI * 0.18, Math.PI * 0.82); ctx.stroke(); ctx.restore();
 }
 function hudPop(id, cls) {
   const el = $(id); if (!el || !el.classList) return;
@@ -498,7 +556,7 @@ function renderCollections(highlightTitle, banner) {
   let html = '';
   for (const c of COLLECTIONS) {
     const got = c.books.filter(([t]) => collected[t]).length;
-    html += '<div class="colsec">' + (c.genre === 'purple' ? '🟣' : '🟢') + ' ' + c.name + ' — ' + got + '/' + c.books.length + (collectionsDone[c.id] ? ' ✓ +' + collectionAward(c) + '✦' : ' · complete it for +' + collectionAward(c) + '✦') + '</div><div class="coltiles">';
+    html += '<div class="colsec">' + '<span style="display:inline-block;width:.7em;height:.7em;border-radius:50%;background:' + GENRE_COLOR[c.genre] + ';vertical-align:-0.04em"></span> ' + c.name + ' — ' + got + '/' + c.books.length + (collectionsDone[c.id] ? ' ✓ +' + collectionAward(c) + '✦' : ' · complete it for +' + collectionAward(c) + '✦') + '</div><div class="coltiles">';
     for (const [title, icon] of c.books) {
       const owned = !!collected[title];
       const sparks = title === highlightTitle ? '<span class="spark" style="--dx:-30px;--dy:-34px;animation-delay:.62s;font-size:13px">✦</span><span class="spark" style="--dx:26px;--dy:-38px;animation-delay:.7s;font-size:11px">✦</span><span class="spark" style="--dx:-34px;--dy:8px;animation-delay:.78s;font-size:11px">✦</span><span class="spark" style="--dx:32px;--dy:12px;animation-delay:.86s;font-size:14px">✦</span><span class="spark" style="--dx:0px;--dy:-46px;animation-delay:.94s;font-size:12px">✦</span>' : '';
@@ -826,12 +884,12 @@ function denyShake() { const b = $('actionBtn'); b.classList.remove('shake'); vo
 function openHaggle(seller) {
   // Roy (2026-10-16): no haggling with full arms — the deal could never
   // complete and the panel trapped the player. Seller just keeps waiting.
-  if (carry.length >= CARRY_MAX) { denyShake(); flash('🧺 Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
+  if (carry.length >= CARRY_MAX) { denyShake(); flash('Your arms are full (max ' + CARRY_MAX + ') — stock something first!'); sfx('err'); return; }
   haggle = { seller, offer: Math.max(1, Math.floor(seller.ask * 0.6)), refusals: 0 };
   seller.state = 'haggle';
-  $('haggleTitle').innerHTML = (seller.sleazy ? '🕶️ Sleazy Supplier — ' : 'Haggle — ') + '<span class="swatch" style="background:' + GENRE_COLOR[seller.book.genre] + '"></span> ' + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
+  $('haggleTitle').innerHTML = (seller.sleazy ? ic('shades') + ' Sleazy Supplier — ' : 'Haggle — ') + '<span class="swatch" style="background:' + GENRE_COLOR[seller.book.genre] + '"></span> ' + GENRE_NAME[seller.book.genre] + (seller.book.special ? ' ✦ SPECIAL' : '');
   const hb = $('haggleBook');   // the title is NOT revealed on this screen (Roy, 2026-10-18 — reversing the collections-build reveal): a collectible shows only its icon, no name, no collection, no NEW note. The album still names it after the purchase.
-  if (seller.book.title) { hb.style.display = ''; hb.innerHTML = '<span style="font-size:27px;">' + (seller.book.icon || '📖') + '</span>'; }
+  if (seller.book.title) { hb.style.display = ''; hb.innerHTML = '<span style="font-size:27px;">' + (seller.book.icon || ic('book')) + '</span>'; }
   else { hb.style.display = 'none'; hb.innerHTML = ''; }
   const [lo, hi] = appraisalRange(seller.book);
   const slider = $('offerSlider');
@@ -894,7 +952,7 @@ $('offerBtn').addEventListener('click', () => {
   } else {
     s.refusals = (s.refusals || 0) + 1;   // Roy (2026-10-18): the THIRD refused offer and they walk out in anger. The strikes live on the SELLER (Codex review): Later + reopening must not reset them
     if (s.refusals >= 3) {
-      flash('😤 Three low offers — they storm off!');
+      flash('Three low offers — they storm off!');
       closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s);
       return;
     }
@@ -910,7 +968,7 @@ $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) c
 
 function renderHaggleMeta(s) {   // Roy (2026-10-18): no refusal TEXT — strikes are hearts that empty, and the seller's patience is shown, live
   const left = Math.max(0, 3 - (s.refusals || 0));
-  const heartPath = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+  const heartPath = HEART_D;
   const heartSVG = off => '<span class="hrt"><svg viewBox="0 0 24 24"><path d="' + heartPath + '" fill="' + (off ? 'none' : '#ffd94a') + '"' + (off ? ' stroke="#ffd94a" stroke-width="1.7"' : '') + '/></svg></span>';
   $('haggleHearts').innerHTML = heartSVG(false).repeat(left) + heartSVG(true).repeat(3 - left);
   const f = Math.max(0, Math.min(1, s.patience / (s.maxPatience || 100)));
@@ -931,12 +989,12 @@ function showReveal(book, paid) {
   tm.style.display = 'block';
   const margin = book.sellPrice - paid;
   const rev = $('haggleReveal');
-  rev.innerHTML = '<div class="card">🤝 Deal! You paid <b>' + paid + '</b> 🪙<br>' +
-    (book.title ? '<div style="font-size:32px; line-height:1.15;">' + (book.icon || '📖') + '</div>' : '') +
+  rev.innerHTML = '<div class="card">' + ic('deal') + ' Deal! You paid <b>' + paid + '</b> ' + ic('coin') + '<br>' +
+    (book.title ? '<div style="font-size:32px; line-height:1.15;">' + (book.icon || ic('book')) + '</div>' : '') +
     'The book actually sells for<br>' +
     '<span class="big" id="revealVal">0</span> 🪙<br>' +
     '<span style="color:' + (margin >= 0 ? '#8fe08a' : '#e08a8a') + '; font-weight:bold;">' +
-    (margin >= 0 ? 'Margin if it sells: +' + margin + ' 🎉' : 'You overpaid by ' + (-margin) + ' 😬') + '</span><br>' +
+    (margin >= 0 ? 'Margin if it sells: +' + margin + ' ' + ic('party') : 'You overpaid by ' + (-margin) + ' ' + ic('faceGrimace')) + '</span><br>' +
     '<button class="primary" id="revealOk" style="margin-top:10px;">Continue</button></div>';
   rev.innerHTML = rev.innerHTML.split('🪙').join(COIN);
   rev.classList.add('pop');
@@ -993,9 +1051,9 @@ function scheduleStep(step, t) {
 }
 function syncMusicBtn() {
   const b = $('musicBtn'); if (!b) return;
-  if (!Music.on) b.textContent = '🔇 Music off';
-  else if (Music.ctx && Music.ctx.state === 'running') b.textContent = '🔊 Music on ♪';
-  else b.textContent = '⚠️ Tap for sound';
+  if (!Music.on) b.innerHTML = ic('speakerOff') + ' Music off';
+  else if (Music.ctx && Music.ctx.state === 'running') b.innerHTML = ic('speaker') + ' Music on ♪';
+  else b.innerHTML = ic('speaker') + ' Tap for sound';
 }
 function musicStart() {
   if (!Music.ctx) {
@@ -1200,7 +1258,7 @@ function refreshHUD() {
   const remain = Math.max(0, DAY_LEN - dayT), mm = Math.floor(remain / 60), ss = Math.floor(remain % 60);
   $('clock').textContent = mm + ':' + String(ss).padStart(2, '0');
   $('rep').textContent = reputation;
-  $('repFace').textContent = reputation <= 0 ? '💀' : reputation >= 40 ? '😀' : reputation >= 30 ? '🙂' : reputation >= 18 ? '😐' : reputation >= 8 ? '🙁' : '😠';
+  $('repFace').innerHTML = repFaceIc();
   $('goodwillSlots').innerHTML = slotsHTML(goodwill, GOODWILL_MAX);
 }
 
@@ -1248,7 +1306,7 @@ let closingTimer = null;
 function showClosing(next) {
   // Pause on a closing message + jingle for ~3s before ANY night screen —
   // the jump straight to the Mysterious Man was jarring (Roy).
-  $('closeTitle').textContent = '🌙 Day ' + day + ' complete';
+  $('closeTitle').innerHTML = ic('moon') + ' Day ' + day + ' complete';
   $('closeOverlay').style.display = 'flex';
   playJingle();
   if (closingTimer) clearTimeout(closingTimer);
@@ -1285,7 +1343,7 @@ function afterClosing() { if (upgrades.checker) showWage(); else restockStep(); 
 function checkerWages() { return (upgrades.checker ? 50 : 0) + (upgrades.checker2 ? 50 : 0); }   // 50 per cashier, per day
 function showWage() {
   const due = checkerWages(), n = (upgrades.checker ? 1 : 0) + (upgrades.checker2 ? 1 : 0), canPay = coins >= due;
-  $('wageBody').innerHTML = '🧾 <b>' + (n > 1 ? 'Your checkers hold out their hands' : 'Your checker holds out a hand') + '.</b> “Wages for the day: <b>' + due + '</b> ' + COIN + '.”';
+  $('wageBody').innerHTML = ic('receipt') + ' <b>' + (n > 1 ? 'Your checkers hold out their hands' : 'Your checker holds out a hand') + '.</b> “Wages for the day: <b>' + due + '</b> ' + COIN + '.”';
   $('wagePay').textContent = canPay ? 'Pay ' + due : 'You can’t afford ' + due;
   $('wagePay').disabled = !canPay;
   $('wageFace').style.display = canPay ? 'none' : '';
@@ -1415,8 +1473,7 @@ function drawMob() {
       ctx.moveTo(m.x + 24, m.y - 49 + flick * 0.35); ctx.lineTo(m.x + 38, m.y - 49 + flick * 0.35);
       ctx.stroke();
     }
-    ctx.fillStyle = '#e06868'; ctx.font = '16px serif'; ctx.textAlign = 'center';
-    ctx.fillText('💢', m.x - 23, m.y - 55);
+    drawAngerC(m.x - 23, m.y - 60, 15, '#e06868');
     ctx.restore();
   }
 }
@@ -1443,16 +1500,16 @@ function showBankrupt(kind) {
   endingKind = kind;
   mob = kind === 'mob' ? makeMob() : [];
   if (kind === 'mob') {
-    $('bankruptTitle').textContent = '🔥 Demanding Customers';   // Roy (2026-10-18)
+    $('bankruptTitle').innerHTML = ic('flame') + ' Demanding Customers';   // Roy (2026-10-18)
     $('bankruptBody').innerHTML = "You can’t open tomorrow. But maybe, just maybe…";   // Roy (2026-10-18): no preamble about why the customers are back — the torches outside explain themselves
   } else if (kind === 'wage') {
-    $('bankruptTitle').textContent = '🧾 Unpaid wages';
+    $('bankruptTitle').innerHTML = ic('receipt') + ' Unpaid wages';
     $('bankruptBody').innerHTML = "Your checker hangs up his apron and walks — and word gets around: a shop that doesn't pay its people doesn't stay open. The deed goes back to the Mysterious Man… unless <i>you</i> can find a buyer first.";
   } else if (kind === 'rep') {
-    $('bankruptTitle').textContent = '🪦 Reputation: zero';
+    $('bankruptTitle').innerHTML = ic('tombstone') + ' Reputation: zero';
     $('bankruptBody').innerHTML = 'Word travels fast in this town. No sellers, no buyers — nobody crosses your threshold anymore. The shop is finished… unless <i>you</i> can find a buyer first.';
   } else {
-    $('bankruptTitle').textContent = '💸 Bankrupt!';
+    $('bankruptTitle').innerHTML = ic('money') + ' Bankrupt!';
     $('bankruptBody').innerHTML = "You can't make the rent. The deed goes back to the Mysterious Man… unless. Unless <i>you</i> can find a buyer first.";
   }
   $('bankruptOk').textContent = kind === 'mob' ? 'Launch exit plan ▸' : 'One last idea… ▸';   // the mob panel's button is Roy's phrase (2026-10-18)
@@ -1531,7 +1588,7 @@ function composeTally() {
     '🌙 <b>Day ' + day + ' complete.</b><br><br>' +
     'Books sold: <b>' + stats.sold + '</b> rang up <b>' + stats.revenue + ' 🪙</b><br>' +
     'Books bought: <b>' + stats.bought + '</b> for <b>' + stats.spent + ' 🪙</b> total<br>' +
-    (stats.restocked ? (stats.restockBy === 'reliable' ? '🤝 The Reliable Supplier' : stats.restockBy === 'supplier' ? '🕶️ The Sleazy Supplier' : '🧥 The Mysterious Man') + ' restocked <b>' + stats.restocked + '</b> books for <b>' + stats.restockCost + ' 🪙</b> (they sell for 25 each)<br>' : '') +
+    (stats.restocked ? (stats.restockBy === 'reliable' ? ic('deal') + ' The Reliable Supplier' : stats.restockBy === 'supplier' ? ic('shades') + ' The Sleazy Supplier' : ic('hat') + ' The Mysterious Man') + ' restocked <b>' + stats.restocked + '</b> books for <b>' + stats.restockCost + ' ' + ic('coin') + '</b> (they sell for 25 each)<br>' : '') +
     (stats.restockDeclined ? 'You turned down the restock from ' + (stats.restockBy === 'reliable' ? 'the Reliable Supplier' : stats.restockBy === 'supplier' ? 'the Sleazy Supplier' : 'the Mysterious Man') + ' (' + stats.restockDeclined + ' empty space' + (stats.restockDeclined === 1 ? '' : 's') + ' left bare)<br>' : '') +
     (stats.wagesPaid ? '🧾 Checker wages: <b>−' + stats.wagesPaid + ' 🪙</b><br>' : '') +
     (stats.rentPaid ? '🧥 Rent to the Mysterious Man: <b>−' + stats.rentPaid + ' 🪙</b> cash<br>' : '') +
@@ -1543,8 +1600,8 @@ function composeTally() {
     'Sellers turned away: <b>' + stats.turnedAway + '</b><br><br>' +
     '📚 Stock left: <b>' + leftBooks.length + '</b> books worth <b>' + invValue + ' 🪙</b> at cost<br>' +
     (stats.shards ? '✦ Star Shards earned: <b>' + stats.shards + '</b> (balance: ' + shards + ')<br>' : '') +
-    '🪙 Coins: <b>' + coins + '</b><br>' +
-    '💰 <b>Net worth: ' + netWorth + ' 🪙</b> (opened at ' + startNetWorth + ') — change: <b style="color:' + (nwDelta >= 0 ? '#8fe08a' : '#e08a8a') + '">' + (nwDelta >= 0 ? '+' : '') + nwDelta + ' 🪙</b><br>' +
+    ic('coin') + ' Coins: <b>' + coins + '</b><br>' +
+    ic('coin') + ' <b>Net worth: ' + netWorth + '</b> (opened at ' + startNetWorth + ') — change: <b style="color:' + (nwDelta >= 0 ? '#8fe08a' : '#e08a8a') + '">' + (nwDelta >= 0 ? '+' : '') + nwDelta + '</b><br>' +
     'Cash-only day result: <b style="color:' + (profit >= 0 ? '#8fe08a' : '#e08a8a') + '">' + (profit >= 0 ? '+' : '') + profit + ' 🪙</b>';
   $('tallyBody').innerHTML = $('tallyBody').innerHTML.split('🪙').join(COIN);
   $('restartBtn').textContent = 'Night market ▸';
@@ -1596,7 +1653,7 @@ function renderUpgrades() {
   // coins / shards / reputation are repeated here — numbers only, no
   // explanatory text (that removal still stands).
   $('upCoins').textContent = coins; $('upShards').textContent = shards; $('upRep').textContent = reputation;
-  $('upRepFace').textContent = reputation <= 0 ? '💀' : reputation >= 40 ? '😀' : reputation >= 30 ? '🙂' : reputation >= 18 ? '😐' : reputation >= 8 ? '🙁' : '😠';   // same face as the HUD — never a star (Roy, 2026-10-17)
+  $('upRepFace').innerHTML = repFaceIc();   // same face as the HUD — never a star (Roy, 2026-10-17)
   // Order (Roy, 2026-10-16): Marketing pinned on top, always; actionable
   // cards next; owned/finished cards sink to the bottom of the list.
   const upRank = u => u.id === 'marketing' ? 0 : (['owned', 'done', 'maxed'].includes(upState(u)) ? 2 : 1);
@@ -1694,7 +1751,7 @@ function drawChair() {
 function drawCustomer(c) {
   ctx.save();
   ctx.translate(c.x, c.y);
-  if (cats.length && inCatAura(c)) { ctx.fillStyle = 'rgba(255,110,150,.9)'; ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.fillText('♥', 0, -34); }
+  if (cats.length && inCatAura(c)) drawHeartC(0, -38, 12, 'rgba(255,110,150,.9)');
   ctx.scale(1.9, 1.9);
   const L = c.look, x = 0, y = 0;
   const moving = !(c.state === 'haggle' || c.state === 'waitShelf');
@@ -1987,7 +2044,7 @@ function draw() {
       ctx.fillStyle = c.patience > 50 ? '#7dd87d' : c.patience > 25 ? '#ffd98a' : '#e06868';
       ctx.fillRect(c.x - 20, c.y - 56, 40 * Math.max(0, c.patience) / 100, 5.5);
     }
-    if (c.state === 'leaveMad') { ctx.fillStyle = '#e06868'; ctx.font = '17px serif'; ctx.fillText('💢', c.x, c.y - 60); }
+    if (c.state === 'leaveMad') drawAngerC(c.x, c.y - 64, 16, '#e06868');
   }
   drawMob();
   if (endBuyer) { drawFigure(endBuyer); if (buyerAsBookseller) drawApronOn(endBuyer); }
@@ -2039,6 +2096,8 @@ function draw() {
       ctx.restore(); ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1);
       ctx.fillStyle = up ? '#8fe08a' : '#ff9a9a'; ctx.font = 'bold 14px Georgia'; ctx.textAlign = 'left';
       ctx.fillText(up ? '+1' : '−1', f.x + 1, ay + 5);
+    } else if (f.face) {
+      drawSmileyC(f.x, f.y - f.t * 26, 9);
     } else {
       ctx.font = f.gold || f.good || f.bad ? 'bold 16px Georgia' : '20px serif'; if (f.gold) ctx.fillStyle = '#ffd94a'; if (f.good) ctx.fillStyle = '#7dd87d'; if (f.bad) ctx.fillStyle = '#ff8080';
       ctx.fillText(f.txt, f.x, f.y - f.t * 26);
@@ -2051,10 +2110,10 @@ function draw() {
     const ix = (1 - t) * (1 - t) * fl.x0 + 2 * (1 - t) * t * cx + t * t * fl.x1;
     const iy = (1 - t) * (1 - t) * fl.y0 + 2 * (1 - t) * t * cy + t * t * fl.y1;
     ctx.save(); ctx.textAlign = 'center';
-    for (let k = 3; k >= 0; k--) { const tt = Math.max(0, t - k * 0.045); const jx = (1 - tt) * (1 - tt) * fl.x0 + 2 * (1 - tt) * tt * cx + tt * tt * fl.x1; const jy = (1 - tt) * (1 - tt) * fl.y0 + 2 * (1 - tt) * tt * cy + tt * tt * fl.y1; ctx.globalAlpha = 0.25 + 0.75 * (1 - k / 4); ctx.fillStyle = '#ffd94a'; ctx.font = 'bold ' + (15 + (3 - k)) + 'px serif'; ctx.fillText('✦', jx, jy); }
+    for (let k = 3; k >= 0; k--) { const tt = Math.max(0, t - k * 0.045); const jx = (1 - tt) * (1 - tt) * fl.x0 + 2 * (1 - tt) * tt * cx + tt * tt * fl.x1; const jy = (1 - tt) * (1 - tt) * fl.y0 + 2 * (1 - tt) * tt * cy + tt * tt * fl.y1; ctx.globalAlpha = 0.25 + 0.75 * (1 - k / 4); drawStar4C(jx, jy, 7.5 + (3 - k) * 1.1, '#ffd94a'); }
     ctx.restore();
   }
-  for (const b of bursts) for (const p of b.ps) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7); ctx.fillStyle = p.color; ctx.font = '13px serif'; ctx.textAlign = 'center'; ctx.fillText(p.glyph, p.x, p.y); ctx.restore(); }
+  for (const b of bursts) for (const p of b.ps) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7); if (p.glyph === '✚') drawPlusC(p.x, p.y, 6, p.color); else drawStar4C(p.x, p.y, 7, p.color); ctx.restore(); }
   if (goldGlowT > 0) { const a = Math.min(0.5, goldGlowT); ctx.save(); ctx.fillStyle = 'rgba(255,217,74,' + (a * 0.07) + ')'; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = 'rgba(255,217,74,' + (a * 0.85) + ')'; ctx.lineWidth = 5; ctx.strokeRect(2.5, 2.5, W - 5, H - 5); ctx.restore(); }
   if (redGlowT > 0) { const a = Math.min(0.5, redGlowT); ctx.save(); ctx.fillStyle = 'rgba(224,104,104,' + (a * 0.08) + ')'; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = 'rgba(224,104,104,' + (a * 0.9) + ')'; ctx.lineWidth = 5; ctx.strokeRect(2.5, 2.5, W - 5, H - 5); ctx.restore(); }
   // opening-sequence coin drain: a stream of coins flying to the landlord…
@@ -2210,7 +2269,7 @@ function drawTitleArt(ts) {
   drawTitleMan(c, 392, 288 + Math.sin(t * 2 + 1.3) * 2);
   drawTitleCat(c, 322, 302, t);
   const ha = Math.max(0, Math.sin(t * 1.1) - 0.78) * 4;
-  if (ha > 0) { c.globalAlpha = Math.min(1, ha); c.fillStyle = '#e0687a'; c.font = '15px serif'; c.fillText('♥', 356, 262 - Math.sin(t * 1.1) * 4); c.globalAlpha = 1; }
+  if (ha > 0) { c.globalAlpha = Math.min(1, ha); c.save(); c.translate(356, 259 - Math.sin(t * 1.1) * 4); c.scale(15 / 24, 15 / 24); c.translate(-12, -12); c.fillStyle = '#e0687a'; c.fill(HEART_PATH); c.restore(); c.globalAlpha = 1; }
 }
 function setupTitleButtons() {
   const snap = loadRunSnapshot(), cb = $('continueBtn');
@@ -2255,6 +2314,16 @@ titleRaf = requestAnimationFrame(drawTitleArt);
 addEventListener('pageshow', e => {
   if (e.persisted) location.reload();   // a back/forward-cache restore reboots to the title screen, where Continue is offered — it must not silently reset the run to Day 1 (Codex review, 2026-10-18)
 });
+// boot-fill the drawn icons into their static placeholders (Roy, 2026-10-18)
+$('h1Book').innerHTML = ic('book');
+$('dayIc').innerHTML = ic('calendar');
+$('clockIc').innerHTML = ic('clock');
+$('colIc').innerHTML = ic('book');
+$('cycleIc').innerHTML = ic('cycle');
+$('winTitle').innerHTML = ic('party') + ' Survived week!';
+$('musicBtn').innerHTML = ic('speaker') + ' Music on';
+document.querySelectorAll('.doorIc').forEach(el => el.innerHTML = ic('door'));
+document.querySelectorAll('.coinIc').forEach(el => el.innerHTML = ic('coin'));
 reset();
 draw();
 requestAnimationFrame(loop);
