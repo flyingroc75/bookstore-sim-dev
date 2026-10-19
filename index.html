@@ -731,6 +731,8 @@ function reset() {
 
 // ---------- Cats, checker, chair (upgrade effects) ----------
 let cats = [];
+let catGiftAt = -1;   // when today's cat gift arrives (seconds into the day); -1 = not armed yet
+let catGiftDay = 0;   // the day the gift was last given — one gift a day (Roy, 2026-10-19)
 let checkerT = 0;
 const CHAIR = { x: 404, y: 306 };   // up and to the left of the rug's top-left corner (Roy, 2026-10-18; the rug spans 402..558 x 346..404)
 const CAT_RADIUS = 120;
@@ -741,6 +743,27 @@ const CASHIER1 = { id: 990, x: 824, y: 406, kind: 'seller', state: 'leaveHappy',
 const CASHIER2 = { id: 991, x: 754, y: 406, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#f2c894', hair: '#b5522a', hairStyle: 3, coat: '#42536c', flip: true } };
 function newCat(color) { return { x: rf(200, 760), y: rf(240, 420), tx: 480, ty: 330, nap: rf(0, 2), color }; }
 function resetCats() { cats = []; if (upgrades.cat) cats.push(newCat('#e8a34c')); if (upgrades.cat2) cats.push(newCat('#9aa0a8')); }
+function rollCatGift() {
+  // Once a day the cat brings you something (Roy, 2026-10-19): a book, cash
+  // (20-50 in fives), a shard, or a dead mouse (no effect). Equal odds.
+  catGiftDay = day;
+  const r = Math.random();
+  if (r < 0.25) {
+    const gs = Object.keys(shelfStock);
+    const genre = gs[Math.floor(Math.random() * gs.length)];
+    const b = makeBook(genre, Math.random() < 0.12, true);   // found books cost nothing, like the opening stock
+    if (shelveBook(genre, b)) { flash('The cat brought you a book.'); sfx('boop'); }
+    else if (carry.length < CARRY_MAX) { carry.push(b); refreshHUD(); flash('The cat brought you a book.'); sfx('boop'); }
+    else flash('The cat brought you a book \u2014 no room for it.');
+  } else if (r < 0.5) {
+    const amt = 20 + 5 * Math.floor(Math.random() * 7);
+    coins += amt; refreshHUD(); flash('The cat brought you ' + amt + ' coins.'); sfx('sale');
+  } else if (r < 0.75) {
+    shards++; saveMeta(); refreshHUD(); flash('The cat brought you a shard.'); sfx('shard');
+  } else {
+    flash('The cat brought you a dead mouse.'); sfx('thunk');
+  }
+}
 function updateCats(dt) {
   for (const cat of cats) {
     if (cat.nap > 0) { cat.nap -= dt; continue; }
@@ -782,7 +805,7 @@ loadMeta();
 function saveRunSnapshot() {
   try {
     localStorage.setItem(RUN_KEY, JSON.stringify({
-      day, coins, reputation, goodwill, upgrades, casePlan, shelfStock, carry,
+      day, coins, reputation, goodwill, upgrades, casePlan, shelfStock, carry, catGiftDay,
       marketingActive, stats, startNetWorth, dayStartCoins, px: player.x, py: player.y
     }));
   } catch (e) {}
@@ -795,7 +818,7 @@ function resyncSnapshot() {   // after a Night Market purchase (Codex review, 20
   try { localStorage.setItem(RUN_KEY, JSON.stringify(sn)); } catch (e) {}
 }
 function restoreRun(snap) {
-  day = snap.day; coins = snap.coins; reputation = snap.reputation; goodwill = snap.goodwill == null ? GOODWILL_MAX : Math.max(0, Math.min(GOODWILL_MAX, snap.goodwill));
+  day = snap.day; coins = snap.coins; reputation = snap.reputation; goodwill = snap.goodwill == null ? GOODWILL_MAX : Math.max(0, Math.min(GOODWILL_MAX, snap.goodwill)); catGiftDay = snap.catGiftDay || 0; catGiftAt = -1;
   upgrades = snap.upgrades; casePlan = snap.casePlan.slice(); keptCasePlan = casePlan.slice();
   keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
   if (boughtEver.chair) upgrades.chair = true;   // the armchair is furniture — it conveys with the shop (Roy, 2026-10-18)
@@ -1167,6 +1190,12 @@ function update(dt) {
   if (!running || over || colOpen || titleOpen) return;
   dayT += dt;
   if (dayT >= DAY_LEN) { endDay(); return; }
+  // the cat's daily gift, at a random hour (Roy, 2026-10-19) — armed lazily
+  // so mornings, restores and new runs all behave the same
+  if (cats.length && catGiftDay !== day) {
+    if (catGiftAt < 0) catGiftAt = rf(DAY_LEN * 0.15, DAY_LEN * 0.85);
+    if (dayT >= catGiftAt) { catGiftAt = -1; rollCatGift(); }
+  }
   spawnT -= dt;
   if (spawnT <= 0) { spawnCustomer(); spawnT = Math.max(4.5, 8.5 - dayT * 0.012) * (25 / Math.min(Math.max(reputation, 8), 50)) * rf(0.8, 1.2) * (DAY_LEN / 210); }   // spawn rate capped at the rep-50 rate: fame past 50 brings no extra foot traffic (Roy, 2026-10-19, after the rep-logging sims showed high-rep shops drown in their own arrivals); density scales with day length so a shorter day admits the same arrivals (Roy, 2026-10-16)
 
