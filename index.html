@@ -11,6 +11,8 @@
   h1 { font-size:20px; letter-spacing:1px; margin:4px 0 8px; color:#e8c87a; }
   #hud { display:flex; gap:22px; font-size:16px; margin-bottom:8px; flex-wrap:wrap; justify-content:center; }
   #hud b { color:#e8c87a; }
+  .slot { display:inline-block; width:15px; height:9px; border:2px solid #8a7a5c; border-radius:2px; margin-right:3px; vertical-align:middle; }
+  .slot.on { background:#ffd94a; border-color:#ffd94a; }
   #wrap { position:relative; }
   canvas { background:#4a3826; border:3px solid #8a6d3f; border-radius:8px; width:min(960px,96vw); height:auto; aspect-ratio:960/600; display:block; touch-action:none; }
   /* width + aspect-ratio (not just max-width): iOS was laying out the wrap
@@ -153,7 +155,7 @@
   <span>📅 <b id="dayNum">Day 1</b></span>
   <span>⏳ <b id="clock">3:30</b></span>
   <span id="repBox"><b id="repFace">😐</b> <b id="rep">25</b></span>
-  <span id="goodwillBox" title="Goodwill: happy customers restore a heart; angry customers take one away"><b id="goodwillHearts">❤️❤️❤️❤️❤️</b></span>
+  <span id="goodwillBox" title="Goodwill: happy customers restore a slot; angry customers take one away"><span id="goodwillSlots"><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span></span></span>
   <span><button id="musicBtn" style="padding:4px 10px; font-size:13px;">🔊 Music on</button></span>
   <span><button id="colBtn" style="padding:4px 10px; font-size:13px;">📚 <b id="colCount">0/100</b></button></span>
   <span id="buildTag" style="opacity:.55; font-size:11px;"></span>
@@ -331,7 +333,8 @@ let coins, shelfStock, carry, customers, dayT, spawnT, running, over;
 let day = 1, dayStartCoins = 200;
 let reputation = 25;                 // ⭐ start ~25; −1 per declined sale / patience walkout; +1 at a 10% chance per happy customer (Roy, 2026-10-17)
 const GOODWILL_MAX = 5;
-let goodwill = GOODWILL_MAX;         // five HUD hearts (Roy, 2026-10-18): angry customers empty one, happy customers restore one; empty means the mob
+let goodwill = GOODWILL_MAX;         // five HUD slots — yellow bars, not hearts (Roy, 2026-10-18): angry customers empty one, happy customers restore one; empty means the mob
+const slotsHTML = (n, total) => '<span class="slot on"></span>'.repeat(n) + '<span class="slot"></span>'.repeat(Math.max(0, total - n));
 function gainGoodwill() {
   if (goodwill >= GOODWILL_MAX) return;
   goodwill++;
@@ -1192,7 +1195,7 @@ function refreshHUD() {
   $('clock').textContent = mm + ':' + String(ss).padStart(2, '0');
   $('rep').textContent = reputation;
   $('repFace').textContent = reputation <= 0 ? '💀' : reputation >= 40 ? '😀' : reputation >= 30 ? '🙂' : reputation >= 18 ? '😐' : reputation >= 8 ? '🙁' : '😠';
-  $('goodwillHearts').textContent = '❤️'.repeat(goodwill) + '🤍'.repeat(GOODWILL_MAX - goodwill);
+  $('goodwillSlots').innerHTML = slotsHTML(goodwill, GOODWILL_MAX);
 }
 
 // Multi-day runs: the shop's state carries over. At closing, everything the
@@ -1364,9 +1367,9 @@ const ENDING_LINES = [
 ];
 const MOB_ENDING_LINES = [
   { who: 'YOU', line: 'Psst. Wanna buy a bookstore?' },
-  { who: 'THE NEXT CHUMP', line: "Oh boy! I've always wanted a bookstore!" },
+  { who: 'UNSUSPECTING BUYER', line: "Oh boy! I've always wanted a bookstore!" },
   { who: 'YOU', line: 'Deal.' },
-  { who: 'THE NEXT CHUMP', line: "…It's a bit run-down. Lively crowd on this street. And — wait, where did he go?" }
+  { who: 'UNSUSPECTING BUYER', line: "…It's a bit run-down. Lively crowd on this street. And — wait, where did he go?" }
 ];
 const endingLines = () => endingKind === 'mob' ? MOB_ENDING_LINES : ENDING_LINES;
 function makeMob() {
