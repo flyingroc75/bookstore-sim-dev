@@ -733,8 +733,11 @@ let cats = [];
 let checkerT = 0;
 const CHAIR = { x: 404, y: 306 };   // up and to the left of the rug's top-left corner (Roy, 2026-10-18; the rug spans 402..558 x 346..404)
 const CAT_RADIUS = 120;
-const CASHIER1 = { id: 990, x: 824, y: 444, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#c68850', hair: '#26221f', hairStyle: 2, coat: '#3f5a46', flip: false } };
-const CASHIER2 = { id: 991, x: 754, y: 444, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#f2c894', hair: '#b5522a', hairStyle: 3, coat: '#42536c', flip: true } };
+// Cashiers stand BEHIND the counter (feet y=406): at y=444 the countertop
+// band (414-425) covered their faces entirely — only a sliver of hair
+// showed, so a hired Checker looked like nobody at all (Roy, 2026-10-18).
+const CASHIER1 = { id: 990, x: 824, y: 406, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#c68850', hair: '#26221f', hairStyle: 2, coat: '#3f5a46', flip: false } };
+const CASHIER2 = { id: 991, x: 754, y: 406, kind: 'seller', state: 'leaveHappy', book: null, patience: 100, maxPatience: 100, look: { skin: '#f2c894', hair: '#b5522a', hairStyle: 3, coat: '#42536c', flip: true } };
 function newCat(color) { return { x: rf(200, 760), y: rf(240, 420), tx: 480, ty: 330, nap: rf(0, 2), color }; }
 function resetCats() { cats = []; if (upgrades.cat) cats.push(newCat('#e8a34c')); if (upgrades.cat2) cats.push(newCat('#9aa0a8')); }
 function updateCats(dt) {
