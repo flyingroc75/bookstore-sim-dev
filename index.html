@@ -1168,7 +1168,7 @@ function update(dt) {
   dayT += dt;
   if (dayT >= DAY_LEN) { endDay(); return; }
   spawnT -= dt;
-  if (spawnT <= 0) { spawnCustomer(); spawnT = Math.max(4.5, 8.5 - dayT * 0.012) * (25 / Math.max(reputation, 8)) * rf(0.8, 1.2) * (DAY_LEN / 210); }   // rep slowdown floored at ~3x; density scales with day length so a shorter day admits the same arrivals (Roy, 2026-10-16)
+  if (spawnT <= 0) { spawnCustomer(); spawnT = Math.max(4.5, 8.5 - dayT * 0.012) * (25 / Math.min(Math.max(reputation, 8), 50)) * rf(0.8, 1.2) * (DAY_LEN / 210); }   // spawn rate capped at the rep-50 rate: fame past 50 brings no extra foot traffic (Roy, 2026-10-19, after the rep-logging sims showed high-rep shops drown in their own arrivals); density scales with day length so a shorter day admits the same arrivals (Roy, 2026-10-16)
 
   // player movement
   let mx = 0, my = 0;
