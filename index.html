@@ -752,9 +752,8 @@ function rollCatGift() {
     const gs = Object.keys(shelfStock);
     const genre = gs[Math.floor(Math.random() * gs.length)];
     const b = makeBook(genre, Math.random() < 0.12, true);   // found books cost nothing, like the opening stock
-    if (shelveBook(genre, b)) { flash('The cat brought you a book.'); sfx('boop'); }
-    else if (carry.length < CARRY_MAX) { carry.push(b); refreshHUD(); flash('The cat brought you a book.'); sfx('boop'); }
-    else flash('The cat brought you a book \u2014 no room for it.');
+    if (carry.length < CARRY_MAX) { carry.push(b); refreshHUD(); flash('The cat brought you a book.'); sfx('boop'); }
+    else { stats.wasted++; stats.wastedValue += b.sellPrice; flash('The cat brought you a book \u2014 your arms were full.'); sfx('thunk'); }   // a gift book goes in your hand or it gets wasted (Roy, 2026-10-19)
   } else if (r < 0.5) {
     const amt = 20 + 5 * Math.floor(Math.random() * 7);
     coins += amt; refreshHUD(); flash('The cat brought you ' + amt + ' coins.'); sfx('sale');
