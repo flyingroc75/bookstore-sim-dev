@@ -113,6 +113,8 @@
   button.primary { background:#8a6d1f; border-color:#e8c87a; font-weight:bold; }
   button:disabled { opacity:.4; cursor:default; }
   #offerVal { font-size:22px; color:#ffd98a; min-width:70px; text-align:center; }
+  #patWrap { display:inline-block; width:130px; height:9px; background:#3a2c20; border-radius:5px; vertical-align:middle; overflow:hidden; }
+  #patBar { display:block; height:100%; width:100%; background:#58c472; }
   #barWrap { position:relative; margin:17px 0 20px; }
   #trueMark { position:absolute; top:19px; transform:translateX(-50%); color:#ffd94a; font-size:11.5px; line-height:1; white-space:nowrap; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.7); }
   #trueMark .tt { font-size:11px; }
@@ -163,7 +165,8 @@
     <h2 id="haggleTitle">Haggle</h2>
     <p id="haggleBook"></p>
     <p>Your appraisal: <b id="haggleRange" style="color:#35c4b5;"></b> <span style="color:#35c4b5;">(teal band on the bar)</span></p>
-    <p>Seller asks: <b id="haggleAsk"></b> · Their patience is draining…</p>
+    <p>Seller asks: <b id="haggleAsk"></b> <span id="haggleHearts" style="letter-spacing:2px;"></span></p>
+    <p>Patience: <span id="patWrap"><span id="patBar"></span></span> <span id="patNum" style="color:#d8c9b8;"></span></p>
     <p style="margin-top:10px;" id="offerLine">Your offer: <span id="offerVal">0</span> <span class="coin"></span></p>
     <div id="barWrap">
       <div id="askTri">▼</div>
@@ -811,7 +814,8 @@ function openHaggle(seller) {
   $('haggleRange').textContent = lo + ' – ' + hi + ' coins';
   $('haggleAsk').textContent = seller.ask;
   $('trueMark').style.display = 'none';   // the true-price marker only appears after a deal
-  $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : (seller.refusals === 2 ? '⚠️ One more low offer and they walk!' : '');
+  $('haggleMsg').textContent = seller.sleazy ? '“Price is retail, friend. Take it or leave it.”' : '';
+  renderHaggleMeta(seller);
   $('hagglePanel').style.display = 'block';   // visible before placeAskTri measures the bar
   syncOffer(); placeAskTri();
 }
@@ -864,13 +868,22 @@ $('offerBtn').addEventListener('click', () => {
     }
     s.patience -= 10;
     s.ask = Math.max(s.floor + 3, Math.round((s.ask + offer) / 2));
-    $('haggleAsk').textContent = s.ask; placeAskTri();
-    $('haggleMsg').textContent = (offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.') + (s.refusals === 2 ? ' ⚠️ One more low offer and they walk!' : '');
+    $('haggleAsk').textContent = s.ask; placeAskTri(); renderHaggleMeta(s);
+    $('haggleMsg').textContent = (offer >= s.floor * 0.85 ? 'Close… they counter at ' + s.ask + '.' : 'They shake their head. Counter: ' + s.ask + '.');
     if (s.patience <= 0) { closeHaggle('storm'); s.state = 'leaveMad'; stats.walkWait++; repDown(s); }
   }
 });
 $('declineBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) repDown(haggle.seller); if (haggle) closeHaggle('decline'); });
 $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) closeHaggle('dismiss'); });
+
+function renderHaggleMeta(s) {   // Roy (2026-10-18): no refusal TEXT — strikes are hearts that empty, and the seller's patience is shown, live
+  const left = Math.max(0, 3 - (s.refusals || 0));
+  $('haggleHearts').textContent = '❤️'.repeat(left) + '🤍'.repeat(3 - left);
+  const f = Math.max(0, Math.min(1, s.patience / (s.maxPatience || 100)));
+  $('patBar').style.width = (f * 100).toFixed(0) + '%';
+  $('patBar').style.background = f > 0.5 ? '#58c472' : f > 0.25 ? '#e8b64c' : '#e05a4c';
+  $('patNum').textContent = Math.ceil(Math.max(0, s.patience)) + 's';
+}
 
 // After a deal: the overlay card reveals the book's ACTUAL sale value
 // (count-up) AND a gold marker on the bar shows where the true price sat
@@ -1058,6 +1071,7 @@ function update(dt) {
   // customers
   const bq = buyQueue(), sq = sellQueue();
   const doorQueue = customers.filter(c => c.state === 'queue');
+  if (haggle) renderHaggleMeta(haggle.seller);   // patience drains during the haggle (2/s) — keep its bar honest
   const shelfWaiters = {}; for (const g of activeGenres) shelfWaiters[g] = 0;
   for (const c of customers) {
     if (c.state === 'approach') {   // outside → the door; in if there's room, else join the pavement queue
