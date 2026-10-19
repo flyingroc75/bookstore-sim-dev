@@ -243,7 +243,7 @@
     </div>
   </div>
   <div class="panel" id="colPanel" style="display:none;">
-    <h2 style="margin-bottom:2px;"><span class="bookIc"></span> Collections <span id="colHeadCount" style="font-size:14px; color:#e8c87a;"></span></h2>
+    <h2 style="margin-bottom:2px;"><span id="colHeadIc"></span> Collections <span id="colHeadCount" style="font-size:14px; color:#e8c87a;"></span></h2>
     <p id="colBanner" style="color:#ffd98a; min-height:18px; margin:2px 0 4px;"></p>
     <div id="colGrid" style="overflow-y:auto; max-height:58vh; text-align:left; padding-right:4px;"></div>
     <div class="row"><button class="primary" id="colClose">Back to the shop</button></div>
@@ -403,6 +403,7 @@ const ICO = {
   coin: svgIc('<circle cx="12" cy="12" r="9" fill="#ffd94a" stroke="#b8860b" stroke-width="2"/><circle cx="12" cy="12" r="4.6" fill="none" stroke="#b8860b" stroke-width="1.6"/>'),
   calendar: svgIc('<rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="#f2e3bb" stroke="#5a4326" stroke-width="1.8"/><rect x="3.5" y="5.5" width="17" height="4.6" fill="#c0392b"/><rect x="7.6" y="3" width="2.6" height="4.6" rx="1.2" fill="#5a4326"/><rect x="13.8" y="3" width="2.6" height="4.6" rx="1.2" fill="#5a4326"/><circle cx="8.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="12.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="16.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="8.4" cy="17.6" r="1.25" fill="#5a4326"/><circle cx="12.4" cy="17.6" r="1.25" fill="#5a4326"/>'),
   clock: svgIc('<circle cx="12" cy="12" r="9" fill="#f2e3bb" stroke="#5a4326" stroke-width="2"/><path d="M12 7.5 V12 L15.2 14.2" stroke="#5a4326" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+  album: svgIc('<rect x="3.2" y="16.6" width="17.6" height="4.6" rx="0.9" fill="#7a3a8c" stroke="#3c2340" stroke-width="1.4"/><rect x="4.1" y="19.1" width="15.8" height="1.5" fill="#f3e9d2"/><path d="M5.4 19.85 h13.2" stroke="#b9a888" stroke-width="0.55"/><rect x="3.2" y="16.6" width="2.2" height="4.6" fill="#5f2a6e"/><rect x="4.6" y="11.4" width="16.2" height="4.6" rx="0.9" fill="#4a6a8a" stroke="#3c2340" stroke-width="1.4"/><rect x="5.5" y="13.9" width="14.4" height="1.5" fill="#f3e9d2"/><path d="M6.8 14.65 h11.8" stroke="#b9a888" stroke-width="0.55"/><rect x="4.6" y="11.4" width="2.2" height="4.6" fill="#33506b"/><rect x="3.9" y="6.2" width="15.4" height="4.6" rx="0.9" fill="#b5586a" stroke="#3c2340" stroke-width="1.4"/><rect x="4.8" y="8.7" width="13.6" height="1.5" fill="#f3e9d2"/><path d="M6.1 9.45 h11" stroke="#b9a888" stroke-width="0.55"/><rect x="3.9" y="6.2" width="2.2" height="4.6" fill="#8c4252"/><path d="M15.9 6.2 v4.4 l-1.35-1.05 -1.35 1.05 v-4.4 z" fill="#ffd94a" stroke="#7a5410" stroke-width="0.8"/>'),   // the Collections icon: a proper book stack with a gold bookmark, no star (Roy, 2026-10-18)
   book: svgIc('<path d="M5 4.5 C7.5 3.2 10 3.4 12 5.2 C14 3.4 16.5 3.2 19 4.5 V19 C16.5 17.8 14 18 12 19.6 C10 18 7.5 17.8 5 19 Z" fill="#7a3a8c" stroke="#3c2340" stroke-width="1.6"/><path d="M12 5.2 V19.6" stroke="#3c2340" stroke-width="1.4"/>'),
   speaker: svgIc('<path d="M4 9.6 v4.8 h3 L12 19 V5 L7 9.6 Z" fill="#e8c87a" stroke="#8a6d1f" stroke-width="1.3"/><path d="M15 9.4 a4.2 4.2 0 0 1 0 5.2 M17.6 7 a7.8 7.8 0 0 1 0 10" stroke="#e8c87a" stroke-width="1.8" fill="none" stroke-linecap="round"/>'),
   speakerOff: svgIc('<path d="M4 9.6 v4.8 h3 L12 19 V5 L7 9.6 Z" fill="#9a8f7a" stroke="#5a5344" stroke-width="1.3"/><path d="M15.4 9.8 L20.4 14.8 M20.4 9.8 L15.4 14.8" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>'),
@@ -587,7 +588,7 @@ function openCollections(cut) {
   let banner = '';
   if (cut) {
     const c = colById(cut.colId);
-    banner = ic('book') + ' New for your collection: “' + cut.title + '” (' + (c ? c.name : '') + ')' + (cut.award ? ' — ' + ic('party') + ' COLLECTION COMPLETE! +' + cut.award + ' ✦' : '');
+    banner = ic('album') + ' New for your collection: “' + cut.title + '” (' + (c ? c.name : '') + ')' + (cut.award ? ' — ' + ic('party') + ' COLLECTION COMPLETE! +' + cut.award + ' ✦' : '');
   }
   renderCollections(cut ? cut.title : null, banner);
   if (cut && cut.award) { const b = $('colBanner'); if (b && b.classList) { b.classList.remove('awardpop'); void b.offsetWidth; b.classList.add('awardpop'); } }
@@ -2189,7 +2190,7 @@ function titleCtx() { const c = $('titleArt'); return c && c.getContext ? c.getC
 function fillTitleSave() {
   const n = Object.keys(collected).length, bits = [];
   if (shards > 0) bits.push('✦ ' + shards);
-  if (n > 0) bits.push(ic('book') + ' ' + n + '/100 collected');
+  if (n > 0) bits.push(ic('album') + ' ' + n + '/100 collected');
   if (keptCasePlan && keptCasePlan.length > 2) bits.push(keptCasePlan.length + ' shelves kept');
   $('titleSave').innerHTML = bits.length ? 'Welcome back — ' + bits.join(' · ') : '';
 }
@@ -2344,7 +2345,8 @@ addEventListener('pageshow', e => {
 $('h1Book').innerHTML = ic('book');
 $('dayIc').innerHTML = ic('calendar');
 $('clockIc').innerHTML = ic('clock');
-$('colIc').innerHTML = ic('book');
+$('colIc').innerHTML = ic('album');
+$('colHeadIc').innerHTML = ic('album');
 $('cycleIc').innerHTML = ic('cycle');
 $('winTitle').innerHTML = ic('party') + ' Survived week!';
 $('musicBtn').innerHTML = ic('speaker');
