@@ -400,12 +400,14 @@ function repDownFX(c) {
 function gameOverRep() {
   if (haggle && haggle.dealt) creditDeal(haggle.seller, false);   // a purchase already paid for still counts (Codex review)
   over = true; running = false; haggle = null;
+  $('actionBtn').style.display = 'none';
   $('hagglePanel').style.display = 'none';   // close whatever was mid-flight; refreshHUD() settles the HUD
   showBankrupt('rep');
 }
 function gameOverMob() {
   if (haggle && haggle.dealt) creditDeal(haggle.seller, false);   // a purchase already paid for still counts
   over = true; running = false; haggle = null;
+  $('actionBtn').style.display = 'none';
   $('hagglePanel').style.display = 'none';
   showBankrupt('mob');
 }
@@ -1177,7 +1179,7 @@ function update(dt) {
   if (st === 'buy') { canAct = !!frontSeller(); }
   else if (st === 'sell') { canAct = !!frontBuyer(); }
   else if (st && st.startsWith('shelf-')) { canAct = carry.some(b => b.genre === st.slice(6)); }
-  $('actionBtn').style.display = canAct ? 'block' : 'none';
+  $('actionBtn').style.display = (canAct && !over) ? 'block' : 'none';   // never resurrect the button on the frame a run ends mid-update (Roy, 2026-10-18: a 'Haggle' button haunted the mob ending)
   $('actionBtn').textContent = st === 'buy' ? 'Haggle' : st === 'sell' ? 'Ring up' : 'Stock books';
   if (flashT > 0) flashT -= dt;
   for (const f of floaters) f.t += dt; floaters = floaters.filter(f => f.t < 1.1);
