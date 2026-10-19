@@ -1455,6 +1455,7 @@ function showBankrupt(kind) {
     $('bankruptTitle').textContent = '💸 Bankrupt!';
     $('bankruptBody').innerHTML = "You can't make the rent. The deed goes back to the Mysterious Man… unless. Unless <i>you</i> can find a buyer first.";
   }
+  $('bankruptOk').textContent = kind === 'mob' ? 'Launch exit plan ▸' : 'One last idea… ▸';   // the mob panel's button is Roy's phrase (2026-10-18)
   $('bankruptPanel').style.display = 'block';
   $('startOverBtn').textContent = kind === 'rep' ? 'Start over' : 'Continue';   // on bankruptcy the ending's button reads "Continue", not "Start over" (Roy, 2026-10-18)
 }
