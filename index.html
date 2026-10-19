@@ -238,7 +238,7 @@
     <canvas id="titleArt" width="640" height="340"></canvas>
     <p id="titleSave"></p>
     <div class="row" style="justify-content:center; gap:10px;">
-      <button class="primary" id="continueBtn" style="display:none;">▶ Continue</button>
+      <button class="primary" id="continueBtn" style="display:none;">Continue</button>
       <button class="primary" id="newGameBtn">New Game</button>
     </div>
   </div>
@@ -404,7 +404,7 @@ const ICO = {
   calendar: svgIc('<rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="#f2e3bb" stroke="#5a4326" stroke-width="1.8"/><rect x="3.5" y="5.5" width="17" height="4.6" fill="#c0392b"/><rect x="7.6" y="3" width="2.6" height="4.6" rx="1.2" fill="#5a4326"/><rect x="13.8" y="3" width="2.6" height="4.6" rx="1.2" fill="#5a4326"/><circle cx="8.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="12.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="16.4" cy="14" r="1.25" fill="#5a4326"/><circle cx="8.4" cy="17.6" r="1.25" fill="#5a4326"/><circle cx="12.4" cy="17.6" r="1.25" fill="#5a4326"/>'),
   clock: svgIc('<circle cx="12" cy="12" r="9" fill="#f2e3bb" stroke="#5a4326" stroke-width="2"/><path d="M12 7.5 V12 L15.2 14.2" stroke="#5a4326" stroke-width="2" fill="none" stroke-linecap="round"/>'),
   album: svgIc('<rect x="3.2" y="16.6" width="17.6" height="4.6" rx="0.9" fill="#7a3a8c" stroke="#3c2340" stroke-width="1.4"/><rect x="4.1" y="19.1" width="15.8" height="1.5" fill="#f3e9d2"/><path d="M5.4 19.85 h13.2" stroke="#b9a888" stroke-width="0.55"/><rect x="3.2" y="16.6" width="2.2" height="4.6" fill="#5f2a6e"/><rect x="4.6" y="11.4" width="16.2" height="4.6" rx="0.9" fill="#4a6a8a" stroke="#3c2340" stroke-width="1.4"/><rect x="5.5" y="13.9" width="14.4" height="1.5" fill="#f3e9d2"/><path d="M6.8 14.65 h11.8" stroke="#b9a888" stroke-width="0.55"/><rect x="4.6" y="11.4" width="2.2" height="4.6" fill="#33506b"/><rect x="3.9" y="6.2" width="15.4" height="4.6" rx="0.9" fill="#b5586a" stroke="#3c2340" stroke-width="1.4"/><rect x="4.8" y="8.7" width="13.6" height="1.5" fill="#f3e9d2"/><path d="M6.1 9.45 h11" stroke="#b9a888" stroke-width="0.55"/><rect x="3.9" y="6.2" width="2.2" height="4.6" fill="#8c4252"/><path d="M15.9 6.2 v4.4 l-1.35-1.05 -1.35 1.05 v-4.4 z" fill="#ffd94a" stroke="#7a5410" stroke-width="0.8"/>'),   // the Collections icon: a proper book stack with a gold bookmark, no star (Roy, 2026-10-18)
-  book: svgIc('<path d="M5 4.5 C7.5 3.2 10 3.4 12 5.2 C14 3.4 16.5 3.2 19 4.5 V19 C16.5 17.8 14 18 12 19.6 C10 18 7.5 17.8 5 19 Z" fill="#7a3a8c" stroke="#3c2340" stroke-width="1.6"/><path d="M12 5.2 V19.6" stroke="#3c2340" stroke-width="1.4"/>'),
+  book: svgIc('<path d="M4.2 5.2 C7 3.8 9.9 4 12 5.9 C14.1 4 17 3.8 19.8 5.2 V19.4 C17 18.2 14.1 18.4 12 20.1 C9.9 18.4 7 18.2 4.2 19.4 Z" fill="#7a3a8c" stroke="#3c2340" stroke-width="1.5"/><path d="M6.1 6.7 C8.2 5.7 10.1 5.8 11.3 7.1 V17.5 C10.1 16.3 8.2 16.2 6.1 17.2 Z" fill="#f6ecd4"/><path d="M17.9 6.7 C15.8 5.7 13.9 5.8 12.7 7.1 V17.5 C13.9 16.3 15.8 16.2 17.9 17.2 Z" fill="#f6ecd4"/><path d="M12 7.1 V17.7" stroke="#c9b384" stroke-width="1"/><path d="M7.3 9.4 H10.3 M7.3 11.6 H10.3 M7.3 13.8 H9.9" stroke="#a08c5a" stroke-width="1.1" stroke-linecap="round"/><path d="M13.7 9.4 H16.7 M13.7 11.6 H16.7 M13.7 13.8 H16.1" stroke="#a08c5a" stroke-width="1.1" stroke-linecap="round"/>'),   // open book with cream pages and text lines — the old solid-purple silhouette read as a dress at small sizes (Roy, 2026-10-19)
   speaker: svgIc('<path d="M4 9.6 v4.8 h3 L12 19 V5 L7 9.6 Z" fill="#e8c87a" stroke="#8a6d1f" stroke-width="1.3"/><path d="M15 9.4 a4.2 4.2 0 0 1 0 5.2 M17.6 7 a7.8 7.8 0 0 1 0 10" stroke="#e8c87a" stroke-width="1.8" fill="none" stroke-linecap="round"/>'),
   speakerOff: svgIc('<path d="M4 9.6 v4.8 h3 L12 19 V5 L7 9.6 Z" fill="#9a8f7a" stroke="#5a5344" stroke-width="1.3"/><path d="M15.4 9.8 L20.4 14.8 M20.4 9.8 L15.4 14.8" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>'),
   moon: svgIc('<path d="M19.8 15.6 A8.6 8.6 0 1 1 8.4 4.2 A6.8 6.8 0 0 0 19.8 15.6Z" fill="#ffd94a" stroke="#b8860b" stroke-width="1.4"/>'),
@@ -2301,7 +2301,7 @@ function drawTitleArt(ts) {
 }
 function setupTitleButtons() {
   const snap = loadRunSnapshot(), cb = $('continueBtn');
-  if (snap) { cb.textContent = '▶ Continue — Day ' + snap.day; cb.style.display = ''; }
+  if (snap) { cb.textContent = 'Continue — Day ' + snap.day; cb.style.display = ''; }
   else cb.style.display = 'none';
 }
 $('continueBtn').addEventListener('click', () => {
