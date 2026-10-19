@@ -158,7 +158,7 @@
   <span><span id="dayIc"></span> <b id="dayNum">Day 1</b></span>
   <span><span id="clockIc"></span> <b id="clock">3:30</b></span>
   <span id="repBox"><b id="repFace"></b> <b id="rep">25</b></span>
-  <span id="goodwillBox" title="Goodwill: happy customers restore a slot; angry customers take one away"><span id="goodwillSlots"><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span></span></span>
+  <span id="goodwillBox" title="Goodwill: refills every morning. Angry customers take a slot away, happy ones restore it — empty brings the mob"><span id="goodwillSlots"><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span><span class="slot on"></span></span></span>
   <span><button id="musicBtn" style="padding:4px 8px; font-size:13px;" title="Music"></button></span>
   <span><button id="colBtn" style="padding:4px 10px; font-size:13px;"><span id="colIc"></span> <b id="colCount">0/100</b></button></span>
   <span id="buildTag" style="opacity:.55; font-size:11px;"></span>
@@ -1300,6 +1300,7 @@ function applyUpgrades() {
 function startNextDay() {
   if ($('upgradesPanel').style.display === 'none') return;   // the ONLY way onward is the Night Market's button — a stray keypress must never skip wages/rent/bankruptcy (Codex review, 2026-10-18)
   day++;
+  goodwill = GOODWILL_MAX;   // a new day, a clean slate: goodwill refills to full every morning (Roy, 2026-10-19) — the mob now needs five angry customers in a SINGLE day
   marketingActive = marketingTonight;   // capture before applyUpgrades clears it
   applyUpgrades();
   customers = []; dayT = 0; spawnT = 1.2; over = false; haggle = null;
