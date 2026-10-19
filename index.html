@@ -1363,10 +1363,10 @@ const ENDING_LINES = [
   { who: 'UNSUSPECTING BUYER', line: "…It's a bit run-down. And — wait, where did he go?" }
 ];
 const MOB_ENDING_LINES = [
-  { who: 'YOU', line: 'Psst. Wanna buy a bookstore? Ignore the charming crowd outside.' },
-  { who: 'THE NEXT CHUMP', line: "Oh boy! I've always wanted a bookstore! Are the torches included?" },
-  { who: 'YOU', line: 'Deal. No refunds.' },
-  { who: 'THE NEXT CHUMP', line: "…Why are they chanting? And — wait, where did he go?" }
+  { who: 'YOU', line: 'Psst. Wanna buy a bookstore?' },
+  { who: 'THE NEXT CHUMP', line: "Oh boy! I've always wanted a bookstore!" },
+  { who: 'YOU', line: 'Deal.' },
+  { who: 'THE NEXT CHUMP', line: "…It's a bit run-down. Lively crowd on this street. And — wait, where did he go?" }
 ];
 const endingLines = () => endingKind === 'mob' ? MOB_ENDING_LINES : ENDING_LINES;
 function makeMob() {
@@ -1434,8 +1434,8 @@ function showBankrupt(kind) {
   endingKind = kind;
   mob = kind === 'mob' ? makeMob() : [];
   if (kind === 'mob') {
-    $('bankruptTitle').textContent = '🔥 The Mob Arrives';
-    $('bankruptBody').innerHTML = "The last heart goes out — and outside, your former customers are gathering with <b>torches and pitchforks</b>. You can't open tomorrow. But maybe, just maybe, you can pawn the bookstore off on the next chump before they reach the door…";
+    $('bankruptTitle').textContent = '🔥 Repeat Customers';
+    $('bankruptBody').innerHTML = "Word travels fast in this town. Quite a few of your former customers have come back tonight — and they don't look like they've come to browse.";   // Roy (2026-10-18): the first draft spelled everything out — "too on the nose." Deadpan now; the torches outside say the rest.
   } else if (kind === 'wage') {
     $('bankruptTitle').textContent = '🧾 Unpaid wages';
     $('bankruptBody').innerHTML = "Your checker hangs up his apron and walks — and word gets around: a shop that doesn't pay its people doesn't stay open. The deed goes back to the Mysterious Man… unless <i>you</i> can find a buyer first.";
