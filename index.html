@@ -168,7 +168,7 @@
     <h2 id="haggleTitle">Haggle</h2>
     <p id="haggleBook"></p>
     <p>Your appraisal: <b id="haggleRange" style="color:#35c4b5;"></b> <span style="color:#35c4b5;">(teal band on the bar)</span></p>
-    <p>Seller asks: <b id="haggleAsk"></b> <span id="haggleHearts" style="letter-spacing:2px;"></span></p>
+    <p>Seller asks: <b id="haggleAsk"></b> <span id="haggleHearts" style="letter-spacing:2px; color:#ffd94a;"></span></p>
     <p>Patience: <span id="patWrap"><span id="patBar"></span></span> <span id="patNum" style="color:#d8c9b8;"></span></p>
     <p style="margin-top:10px;" id="offerLine">Your offer: <span id="offerVal">0</span> <span class="coin"></span></p>
     <div id="barWrap">
@@ -358,9 +358,9 @@ function repDown(c) {
 // customer has a 10% chance to bump reputation, with a boop and a smiley.
 let floaters = [];   // little rising emoji (😊 on a rep bump)
 function happyCustomer(c) {
-  gainGoodwill();   // a successfully served customer always restores goodwill, even when reputation does not randomly rise
   if (Math.random() >= 0.10) return;
   reputation = Math.min(100, reputation + 1);
+  gainGoodwill();   // a goodwill slot comes back only when reputation actually goes up (Roy, 2026-10-18)
   refreshHUD(); sfx('boop'); hudPop('repBox', 'hudgood');
   if (c) { floaters.push({ x: c.x, y: c.y - 48, t: 0, txt: '😊' }); floaters.push({ x: c.x + 14, y: c.y - 62, t: 0, arrow: 'up' }); bursts.push(makeBurst(c.x, c.y - 30, '#7dd87d', '✚')); }
 }
@@ -905,7 +905,7 @@ $('dismissBtn').addEventListener('click', () => { if (haggle && !haggle.dealt) c
 
 function renderHaggleMeta(s) {   // Roy (2026-10-18): no refusal TEXT — strikes are hearts that empty, and the seller's patience is shown, live
   const left = Math.max(0, 3 - (s.refusals || 0));
-  $('haggleHearts').textContent = '❤️'.repeat(left) + '🤍'.repeat(3 - left);
+  $('haggleHearts').textContent = '♥\uFE0E'.repeat(left) + '♡\uFE0E'.repeat(3 - left);   // flat yellow hearts, yellow outline when empty (Roy, 2026-10-18) — \uFE0E forces the text glyph, not the red emoji
   const f = Math.max(0, Math.min(1, s.patience / (s.maxPatience || 100)));
   $('patBar').style.width = (f * 100).toFixed(0) + '%';
   $('patBar').style.background = f > 0.5 ? '#58c472' : f > 0.25 ? '#e8b64c' : '#e05a4c';
