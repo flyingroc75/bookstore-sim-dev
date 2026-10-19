@@ -172,7 +172,7 @@
     <p id="haggleBook"></p>
     <p>Your appraisal: <b id="haggleRange" style="color:#35c4b5;"></b></p>
     <p>Seller asks: <b id="haggleAsk"></b></p>
-    <p><span id="haggleHearts"></span> <span id="patWrap"><span id="patBar"></span></span> <span id="patNum" style="color:#d8c9b8;"></span></p>
+    <p><span id="haggleHearts"></span> <span id="patWrap"><span id="patBar"></span></span></p>
     <p style="margin-top:10px;" id="offerLine">Your offer: <span id="offerVal">0</span> <span class="coin"></span></p>
     <div id="barWrap">
       <div id="askTri">▼</div>
@@ -914,7 +914,6 @@ function renderHaggleMeta(s) {   // Roy (2026-10-18): no refusal TEXT — strike
   const f = Math.max(0, Math.min(1, s.patience / (s.maxPatience || 100)));
   $('patBar').style.width = (f * 100).toFixed(0) + '%';
   $('patBar').style.background = f > 0.5 ? '#58c472' : f > 0.25 ? '#e8b64c' : '#e05a4c';
-  $('patNum').textContent = Math.ceil(Math.max(0, s.patience)) + 's';
 }
 
 // After a deal: the overlay card reveals the book's ACTUAL sale value
