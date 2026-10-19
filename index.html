@@ -153,6 +153,7 @@
   <span>📅 <b id="dayNum">Day 1</b></span>
   <span>⏳ <b id="clock">3:30</b></span>
   <span id="repBox"><b id="repFace">😐</b> <b id="rep">25</b></span>
+  <span id="goodwillBox" title="Goodwill: happy customers restore a heart; angry customers take one away"><b id="goodwillHearts">❤️❤️❤️❤️❤️</b></span>
   <span><button id="musicBtn" style="padding:4px 10px; font-size:13px;">🔊 Music on</button></span>
   <span><button id="colBtn" style="padding:4px 10px; font-size:13px;">📚 <b id="colCount">0/100</b></button></span>
   <span id="buildTag" style="opacity:.55; font-size:11px;"></span>
@@ -329,16 +330,32 @@ let OBSTACLES = [];   // rebuilt by buildCases() (cases + counters)
 let coins, shelfStock, carry, customers, dayT, spawnT, running, over;
 let day = 1, dayStartCoins = 200;
 let reputation = 25;                 // ⭐ start ~25; −1 per declined sale / patience walkout; +1 at a 10% chance per happy customer (Roy, 2026-10-17)
+const GOODWILL_MAX = 5;
+let goodwill = GOODWILL_MAX;         // five HUD hearts (Roy, 2026-10-18): angry customers empty one, happy customers restore one; empty means the mob
+function gainGoodwill() {
+  if (goodwill >= GOODWILL_MAX) return;
+  goodwill++;
+  refreshHUD(); hudPop('goodwillBox', 'hudgood');
+}
+function loseGoodwill() {
+  if (over) return;
+  goodwill = Math.max(0, goodwill - 1);
+  refreshHUD(); hudPop('goodwillBox', 'hudbad');
+  if (goodwill <= 0 && running && !over) gameOverMob();
+}
 function repDown(c) {
   reputation = Math.max(0, reputation - 1);
   refreshHUD(); sfx('bloop');   // Roy (2026-10-17): a sad bloop whenever a customer leaves unhappy (every repDown is one)
   repDownFX(c);
+  loseGoodwill();
+  if (goodwill <= 0 || over) return;   // the mob ending takes precedence if this angry customer emptied the last heart
   if (reputation <= 0 && running && !over) gameOverRep();
 }
 // Roy (2026-10-17): no more daily +1 — instead each successfully served
 // customer has a 10% chance to bump reputation, with a boop and a smiley.
 let floaters = [];   // little rising emoji (😊 on a rep bump)
 function happyCustomer(c) {
+  gainGoodwill();   // a successfully served customer always restores goodwill, even when reputation does not randomly rise
   if (Math.random() >= 0.10) return;
   reputation = Math.min(100, reputation + 1);
   refreshHUD(); sfx('boop'); hudPop('repBox', 'hudgood');
@@ -379,6 +396,12 @@ function gameOverRep() {
   over = true; running = false; haggle = null;
   $('hagglePanel').style.display = 'none';   // close whatever was mid-flight; refreshHUD() settles the HUD
   showBankrupt('rep');
+}
+function gameOverMob() {
+  if (haggle && haggle.dealt) creditDeal(haggle.seller, false);   // a purchase already paid for still counts
+  over = true; running = false; haggle = null;
+  $('hagglePanel').style.display = 'none';
+  showBankrupt('mob');
 }
 function freshStats() { return { sold: 0, revenue: 0, bought: 0, spent: 0, costOfSold: 0, walkWait: 0, walkStock: 0, turnedAway: 0, wasted: 0, wastedValue: 0, restocked: 0, restockCost: 0, restockDeclined: 0, rentPaid: 0, wagesPaid: 0, restockBy: '', shards: 0, sweptBack: 0 }; }
 let stats, haggle; // haggle = { seller, offer }
@@ -614,6 +637,7 @@ function reset() {
   stats = freshStats();
   day = 1; dayStartCoins = coins;
   reputation = 25;   // new run: reputation NEVER carries (Roy, 2026-10-17: on bankruptcy only furniture and the cat are carried forward — supersedes the 2026-10-16 carry-over rule)
+  goodwill = GOODWILL_MAX; endingKind = null; mob = [];
   startNetWorth = coins + Object.values(shelfStock).flat().filter(Boolean).reduce((a, b) => a + (b.cost || 0), 0);
   player = { x: 480, y: 385, speed: 235 * SPEED_MULT, target: null };
   document.getElementById('tallyPanel').style.display = 'none';
@@ -672,7 +696,7 @@ loadMeta();
 function saveRunSnapshot() {
   try {
     localStorage.setItem(RUN_KEY, JSON.stringify({
-      day, coins, reputation, upgrades, casePlan, shelfStock, carry,
+      day, coins, reputation, goodwill, upgrades, casePlan, shelfStock, carry,
       marketingActive, stats, startNetWorth, dayStartCoins, px: player.x, py: player.y
     }));
   } catch (e) {}
@@ -685,7 +709,7 @@ function resyncSnapshot() {   // after a Night Market purchase (Codex review, 20
   try { localStorage.setItem(RUN_KEY, JSON.stringify(sn)); } catch (e) {}
 }
 function restoreRun(snap) {
-  day = snap.day; coins = snap.coins; reputation = snap.reputation;
+  day = snap.day; coins = snap.coins; reputation = snap.reputation; goodwill = snap.goodwill == null ? GOODWILL_MAX : Math.max(0, Math.min(GOODWILL_MAX, snap.goodwill));
   upgrades = snap.upgrades; casePlan = snap.casePlan.slice(); keptCasePlan = casePlan.slice();
   keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
   if (boughtEver.chair) upgrades.chair = true;   // the armchair is furniture — it conveys with the shop (Roy, 2026-10-18)
@@ -1168,6 +1192,7 @@ function refreshHUD() {
   $('clock').textContent = mm + ':' + String(ss).padStart(2, '0');
   $('rep').textContent = reputation;
   $('repFace').textContent = reputation <= 0 ? '💀' : reputation >= 40 ? '😀' : reputation >= 30 ? '🙂' : reputation >= 18 ? '😐' : reputation >= 8 ? '🙁' : '😠';
+  $('goodwillHearts').textContent = '❤️'.repeat(goodwill) + '🤍'.repeat(GOODWILL_MAX - goodwill);
 }
 
 // Multi-day runs: the shop's state carries over. At closing, everything the
@@ -1326,6 +1351,7 @@ function proceedAfterRestock() {
 
 // ---------- Week's end: rent, and what happens if you can't pay ----------
 let confetti = [], endingStep = -1, endBuyer = null, playerLeaving = false;
+let endingKind = null, mob = [];
 // Roy (2026-10-17): the ending gets a little transformation animation —
 // the Buyer becomes the bookseller, and YOU become the Mysterious Man.
 let transformT = -1, transformSwapped = false, playerAsMan = false, buyerAsBookseller = false;
@@ -1336,6 +1362,55 @@ const ENDING_LINES = [
   { who: 'YOU', line: 'Deal.' },
   { who: 'UNSUSPECTING BUYER', line: "…It's a bit run-down. And — wait, where did he go?" }
 ];
+const MOB_ENDING_LINES = [
+  { who: 'YOU', line: 'Psst. Wanna buy a bookstore? Ignore the charming crowd outside.' },
+  { who: 'THE NEXT CHUMP', line: "Oh boy! I've always wanted a bookstore! Are the torches included?" },
+  { who: 'YOU', line: 'Deal. No refunds.' },
+  { who: 'THE NEXT CHUMP', line: "…Why are they chanting? And — wait, where did he go?" }
+];
+const endingLines = () => endingKind === 'mob' ? MOB_ENDING_LINES : ENDING_LINES;
+function makeMob() {
+  const skins = ['#e8b48c', '#c68850', '#8a5a34', '#f0c8a0', '#6e4525'];
+  const hairs = ['#26221f', '#6b4a2f', '#2b2b2b', '#8c6a3f', '#4a2f22'];
+  const coats = ['#7a3a3a', '#3f5a46', '#4a4a6e', '#6e5636', '#5d3a5e', '#37474f'];
+  const figures = [];
+  for (let i = 0; i < 17; i++) {
+    const back = i >= 9;
+    figures.push({ id: 1200 + i, kind: 'seller', genre: 'green', state: 'mob', book: null,
+      x: back ? 218 + (i - 9) * 82 : 176 + i * 82, y: back ? 584 : 560,
+      prop: i % 2 ? 'pitchfork' : 'torch',
+      look: { skin: skins[i % skins.length], hair: hairs[(i * 2) % hairs.length], hairStyle: i % 4, coat: coats[(i * 3) % coats.length], flip: false } });
+  }
+  return figures;
+}
+function drawMob() {
+  if (!mob.length) return;
+  const now = performance.now();
+  for (const m of mob) {
+    drawCustomer(m);
+    const flick = Math.sin(now / 85 + m.id * 1.9) * 1.6;
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(m.x + 23, m.y - 8); ctx.lineTo(m.x + 31, m.y - 43 + flick * 0.35); ctx.stroke();
+    if (m.prop === 'torch') {
+      const fx = m.x + 31, fy = m.y - 50 + flick * 0.35;
+      ctx.fillStyle = 'rgba(255,138,42,.20)'; ctx.beginPath(); ctx.arc(fx, fy, 15 + flick, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f07d24'; ctx.beginPath(); ctx.moveTo(fx - 6, fy + 7); ctx.quadraticCurveTo(fx - 7, fy - 3, fx, fy - 13 - flick); ctx.quadraticCurveTo(fx + 7, fy - 3, fx + 6, fy + 7); ctx.quadraticCurveTo(fx, fy + 10, fx - 6, fy + 7); ctx.fill();
+      ctx.fillStyle = '#ffd94a'; ctx.beginPath(); ctx.moveTo(fx - 3, fy + 6); ctx.quadraticCurveTo(fx - 3, fy, fx, fy - 7 - flick * 0.5); ctx.quadraticCurveTo(fx + 3, fy, fx + 3, fy + 6); ctx.quadraticCurveTo(fx, fy + 8, fx - 3, fy + 6); ctx.fill();
+    } else {
+      ctx.strokeStyle = '#9aa0a8'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(m.x + 31, m.y - 43 + flick * 0.35); ctx.lineTo(m.x + 31, m.y - 58 + flick * 0.35);
+      ctx.moveTo(m.x + 24, m.y - 49 + flick * 0.35); ctx.lineTo(m.x + 24, m.y - 58 + flick * 0.35);
+      ctx.moveTo(m.x + 38, m.y - 49 + flick * 0.35); ctx.lineTo(m.x + 38, m.y - 58 + flick * 0.35);
+      ctx.moveTo(m.x + 24, m.y - 49 + flick * 0.35); ctx.lineTo(m.x + 38, m.y - 49 + flick * 0.35);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#e06868'; ctx.font = '16px serif'; ctx.textAlign = 'center';
+    ctx.fillText('💢', m.x - 23, m.y - 55);
+    ctx.restore();
+  }
+}
 const rentDue = () => 200 + 100 * (day / 3);   // 300 in week 1, +100 each week (was 500 base; Roy, 2026-10-16)
 function showRent() {
   sfx('knock');   // the Man knocks before he asks for rent (Roy, 2026-10-18)
@@ -1356,7 +1431,12 @@ $('rentPay').addEventListener('click', () => {
 $('winOk').addEventListener('click', () => { $('winPanel').style.display = 'none'; releaseVisitor(); composeTally(); });
 $('rentFace').addEventListener('click', () => { $('rentPanel').style.display = 'none'; releaseVisitor(); showBankrupt('rent'); });
 function showBankrupt(kind) {
-  if (kind === 'wage') {
+  endingKind = kind;
+  mob = kind === 'mob' ? makeMob() : [];
+  if (kind === 'mob') {
+    $('bankruptTitle').textContent = '🔥 The Mob Arrives';
+    $('bankruptBody').innerHTML = "The last heart goes out — and outside, your former customers are gathering with <b>torches and pitchforks</b>. You can't open tomorrow. But maybe, just maybe, you can pawn the bookstore off on the next chump before they reach the door…";
+  } else if (kind === 'wage') {
     $('bankruptTitle').textContent = '🧾 Unpaid wages';
     $('bankruptBody').innerHTML = "Your checker hangs up his apron and walks — and word gets around: a shop that doesn't pay its people doesn't stay open. The deed goes back to the Mysterious Man… unless <i>you</i> can find a buyer first.";
   } else if (kind === 'rep') {
@@ -1381,7 +1461,7 @@ $('startOverBtn').addEventListener('click', () => {
   saveMeta();
   snapshotArmed = true;
   $('endPanel').style.display = 'none';
-  coinFrom = null; coinTo = null; coinLabel = 'Y O U R   C O I N S'; playerLeaving = false; transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false;
+  coinFrom = null; coinTo = null; coinLabel = 'Y O U R   C O I N S'; playerLeaving = false; transformT = -1; transformSwapped = false; playerAsMan = false; buyerAsBookseller = false; endingKind = null; mob = [];
   reset(); running = true; musicStart();
 });
 function spawnConfetti() {
@@ -1396,13 +1476,15 @@ function startEnding() {
   endBuyer = { id: 998, x: 446, y: 356, state: 'haggle', kind: 'buyer', genre: 'green',
                look: { skin: '#e8b48c', hair: '#6b4a2f', hairStyle: 0, coat: '#b0503c' } };
   player.x = 532; player.y = 356; player.target = null;
+  if (endingKind === 'mob' && !mob.length) mob = makeMob();
   coinFrom = endBuyer; coinTo = { x: 532, y: 322 }; coinLabel = 'H I S   C O I N S';
   showEndingLine();
   $('introBar').style.display = 'block';
 }
 function showEndingLine() {
-  $('introName').textContent = ENDING_LINES[endingStep].who;
-  $('introLine').textContent = ENDING_LINES[endingStep].line;
+  const lines = endingLines();
+  $('introName').textContent = lines[endingStep].who;
+  $('introLine').textContent = lines[endingStep].line;
 }
 function advanceEnding() {
   if (endingStep < 0) return;
@@ -1411,7 +1493,7 @@ function advanceEnding() {
   if (endingStep === 1) { coinAnim = { t: 0 }; introCoins = 9999; }
   if (endingStep === 2 && !transformSwapped) { transformT = 0; return; }   // "Deal." — the transformation beat
   endingStep++;
-  if (endingStep >= ENDING_LINES.length) {
+  if (endingStep >= endingLines().length) {
     endingStep = -1; endBuyer = null; coinFrom = null; coinTo = null;
     $('introBar').style.display = 'none';
     $('endPanel').style.display = 'block';
@@ -1897,6 +1979,7 @@ function draw() {
     }
     if (c.state === 'leaveMad') { ctx.fillStyle = '#e06868'; ctx.font = '17px serif'; ctx.fillText('💢', c.x, c.y - 60); }
   }
+  drawMob();
   if (endBuyer) { drawFigure(endBuyer); if (buyerAsBookseller) drawApronOn(endBuyer); }
   // the landlord (opening sequence only) — shady suit, fedora, deed in hand
   if (landlord) {
