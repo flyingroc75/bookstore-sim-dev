@@ -1535,7 +1535,7 @@ function showBankrupt(kind) {
   }
   $('bankruptOk').textContent = kind === 'mob' ? 'Launch exit plan ▸' : 'One last idea… ▸';   // the mob panel's button is Roy's phrase (2026-10-18)
   $('bankruptPanel').style.display = 'block';
-  $('startOverBtn').textContent = kind === 'rep' ? 'Start over' : 'Continue';   // on bankruptcy the ending's button reads "Continue", not "Start over" (Roy, 2026-10-18)
+  $('startOverBtn').textContent = 'Continue';   // every ending's button reads "Continue" — the reputation ending was the odd one out (Roy, 2026-10-19)
 }
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
 $('startOverBtn').addEventListener('click', () => {
