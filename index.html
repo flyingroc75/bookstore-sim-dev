@@ -1443,7 +1443,7 @@ function showBankrupt(kind) {
   endingKind = kind;
   mob = kind === 'mob' ? makeMob() : [];
   if (kind === 'mob') {
-    $('bankruptTitle').textContent = '🔥 Repeat Customers';
+    $('bankruptTitle').textContent = '🔥 Demanding Customers';   // Roy (2026-10-18)
     $('bankruptBody').innerHTML = "You can’t open tomorrow. But maybe, just maybe…";   // Roy (2026-10-18): no preamble about why the customers are back — the torches outside explain themselves
   } else if (kind === 'wage') {
     $('bankruptTitle').textContent = '🧾 Unpaid wages';
