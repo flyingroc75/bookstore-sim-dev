@@ -227,9 +227,16 @@
     <div class="row"><button class="primary" id="bankruptOk">One last idea… ▸</button></div>
   </div>
 
+  <div class="panel storybar" id="winRunPanel" style="display:none;">
+    <h2 id="winRunTitle">A beloved bookshop</h2>
+    <p>Everyone in town knows this shop.</p>
+    <p id="winRunStats"></p>
+    <div class="row"><button class="primary" id="winRunKeep">Keep playing ▸</button><button id="winRunEnd">End the run</button></div>
+  </div>
+
   <div class="panel storybar" id="endPanel" style="display:none;">
-    <h2><span id="cycleIc"></span> The cycle continues</h2>
-    <p>Somewhere, a well-meaning soul is about to have a very educational week.</p>
+    <h2 id="endTitle"><span id="cycleIc"></span> The cycle continues</h2>
+    <p id="endBody">Somewhere, a well-meaning soul is about to have a very educational week.</p>
     <div class="row"><button class="primary" id="startOverBtn">Start over</button></div>
   </div>
 
@@ -720,7 +727,7 @@ function reset() {
   stats = freshStats();
   day = 1; dayStartCoins = coins;
   reputation = 25;   // new run: reputation NEVER carries (Roy, 2026-10-17: on bankruptcy only furniture and the cat are carried forward — supersedes the 2026-10-16 carry-over rule)
-  goodwill = GOODWILL_MAX; endingKind = null; mob = [];
+  goodwill = GOODWILL_MAX; endingKind = null; mob = []; wonRun = false;
   startNetWorth = coins + Object.values(shelfStock).flat().filter(Boolean).reduce((a, b) => a + (b.cost || 0), 0);
   player = { x: 480, y: 385, speed: 235 * SPEED_MULT, target: null };
   document.getElementById('tallyPanel').style.display = 'none';
@@ -785,6 +792,8 @@ const SAVE_KEY = 'bookstoreSim.v1';
 const RUN_KEY = 'bookstoreSim.run';   // morning snapshot of the current run, for the title screen's Continue (Roy, 2026-10-17)
 let snapshotArmed = false;            // armed by New Game / Start Over so their reset() snapshots the fresh Day 1 (the load-time reset must NOT overwrite a saved run)
 let shards = 0;
+let wins = 0;              // runs WON (closed a day at reputation 100) — meta progression, banked the moment it happens (Roy, 2026-10-19)
+let wonRun = false;        // this run has been won (the celebration fires once; the run may continue)
 let unlocked = {};      // upgrade id -> true (persistent)
 let boughtEver = {};    // upgrade id -> true (persistent; gates unlock prerequisites)
 let keptCasePlan = null;   // the shop's case layout (its shelves), kept across runs (Roy, 2026-10-16)
@@ -798,13 +807,13 @@ let inheritCat = false;    // armed by the Start Over button; consumed by reset(
 let keptCap = 6;           // the bookcase tier the shelves carry (6/9/12) — kept WITH the shelves across runs (Roy, 2026-10-17: on reset the cases "became not upgraded")
 function saveMeta() { try {
     if (typeof upgrades !== 'undefined' && upgrades && (upgrades.bookcase || upgrades.bookcase2)) keptCap = Math.max(keptCap, upgrades.bookcase2 ? 12 : 9);   // the shelves remember their tier
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, unlocked, boughtEver, casePlan, keptCats, keptCap, keptStock, bookSeq, shardPaid, collected, collectionsDone })); } catch (e) {} }
-function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; if (d.keptStock) keptStock = d.keptStock; if (d.bookSeq) bookSeq = d.bookSeq; if (d.shardPaid) shardPaid = d.shardPaid; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ shards, wins, unlocked, boughtEver, casePlan, keptCats, keptCap, keptStock, bookSeq, shardPaid, collected, collectionsDone })); } catch (e) {} }
+function loadMeta() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) { shards = d.shards | 0; wins = d.wins | 0; unlocked = d.unlocked || {}; boughtEver = d.boughtEver || {}; if (Array.isArray(d.casePlan) && d.casePlan.length) keptCasePlan = d.casePlan; if (d.keptCats) keptCats = d.keptCats; if (d.keptCap) keptCap = d.keptCap; if (d.keptStock) keptStock = d.keptStock; if (d.bookSeq) bookSeq = d.bookSeq; if (d.shardPaid) shardPaid = d.shardPaid; collected = d.collected || {}; collectionsDone = d.collectionsDone || {}; } } catch (e) {} }
 loadMeta();
 function saveRunSnapshot() {
   try {
     localStorage.setItem(RUN_KEY, JSON.stringify({
-      day, coins, reputation, goodwill, upgrades, casePlan, shelfStock, carry, catGiftDay,
+      day, coins, reputation, goodwill, upgrades, casePlan, shelfStock, carry, catGiftDay, wonRun,
       marketingActive, stats, startNetWorth, dayStartCoins, px: player.x, py: player.y
     }));
   } catch (e) {}
@@ -817,7 +826,7 @@ function resyncSnapshot() {   // after a Night Market purchase (Codex review, 20
   try { localStorage.setItem(RUN_KEY, JSON.stringify(sn)); } catch (e) {}
 }
 function restoreRun(snap) {
-  day = snap.day; coins = snap.coins; reputation = snap.reputation; goodwill = snap.goodwill == null ? GOODWILL_MAX : Math.max(0, Math.min(GOODWILL_MAX, snap.goodwill)); catGiftDay = snap.catGiftDay || 0; catGiftAt = -1;
+  day = snap.day; coins = snap.coins; reputation = snap.reputation; goodwill = snap.goodwill == null ? GOODWILL_MAX : Math.max(0, Math.min(GOODWILL_MAX, snap.goodwill)); catGiftDay = snap.catGiftDay || 0; catGiftAt = -1; wonRun = !!snap.wonRun;
   upgrades = snap.upgrades; casePlan = snap.casePlan.slice(); keptCasePlan = casePlan.slice();
   keptCats = { cat: !!upgrades.cat, cat2: !!upgrades.cat2 };
   if (boughtEver.chair) upgrades.chair = true;   // the armchair is furniture — it conveys with the shop (Roy, 2026-10-18)
@@ -828,7 +837,7 @@ function restoreRun(snap) {
   dayT = 0; spawnT = 1.2; over = false; introStep = -1; storySeen = true;
   player.x = snap.px || 480; player.y = snap.py || 385; player.target = null; clickTarget = null;
   applyUpgrades();
-  for (const id of ['tallyPanel', 'upgradesPanel', 'hagglePanel', 'restockPanel', 'rentPanel', 'winPanel', 'bankruptPanel', 'endPanel', 'colPanel']) $(id).style.display = 'none';
+  for (const id of ['tallyPanel', 'upgradesPanel', 'hagglePanel', 'restockPanel', 'rentPanel', 'winPanel', 'bankruptPanel', 'endPanel', 'colPanel', 'winRunPanel']) $(id).style.display = 'none';
   colOpen = false;
   refreshHUD();
   running = true;
@@ -1384,7 +1393,12 @@ function endDay() {
     else if (carry.length < CARRY_MAX) carry.push(b);
     else { stats.wasted++; stats.wastedValue += b.sellPrice; }
   }
-  showClosing(afterClosing);
+  // The win (Roy, 2026-10-19): close a day at reputation 100 and the run is
+  // WON. Banked in the meta save immediately; celebrated before the night's
+  // business — the night can still kill the run afterwards, the win stands.
+  const justWon = reputation >= 100 && !wonRun;
+  if (justWon) { wonRun = true; wins++; saveMeta(); }
+  showClosing(() => { if (justWon) showWinRun(); else afterClosing(); });
 }
 // The night's order (Roy, 2026-10-18): after the closing pause, the
 // Checker's wage comes BEFORE the supplier's knock — then the restock,
@@ -1548,6 +1562,9 @@ $('winOk').addEventListener('click', () => { $('winPanel').style.display = 'none
 $('rentFace').addEventListener('click', () => { $('rentPanel').style.display = 'none'; releaseVisitor(); showBankrupt('rent'); });
 function showBankrupt(kind) {
   endingKind = kind;
+  // a win's "End the run" rewrites the end panel — restore the cycle text for failure endings
+  $('endTitle').innerHTML = '<span id="cycleIc">' + ic('cycle') + '</span> The cycle continues';
+  $('endBody').textContent = 'Somewhere, a well-meaning soul is about to have a very educational week.';
   mob = kind === 'mob' ? makeMob() : [];
   if (kind === 'mob') {
     $('bankruptTitle').innerHTML = ic('flame') + ' Demanding Customers';   // Roy (2026-10-18)
@@ -1567,6 +1584,21 @@ function showBankrupt(kind) {
   $('startOverBtn').textContent = 'Continue';   // every ending's button reads "Continue" — the reputation ending was the odd one out (Roy, 2026-10-19)
 }
 $('bankruptOk').addEventListener('click', () => { $('bankruptPanel').style.display = 'none'; startEnding(); });
+function showWinRun() {
+  sfx('fanfare'); spawnConfetti();
+  $('winRunTitle').innerHTML = ic('party') + ' A beloved bookshop';
+  const nw = coins + Object.values(shelfStock).flat().filter(Boolean).concat(carry).reduce((a, b) => a + (b.cost || 0), 0);
+  $('winRunStats').innerHTML = 'Day ' + day + ' · Net worth ' + nw + ' · ' + Object.keys(collected).length + '/100 collected · Win #' + wins;
+  $('winRunPanel').style.display = 'block';
+}
+$('winRunKeep').addEventListener('click', () => { $('winRunPanel').style.display = 'none'; afterClosing(); });   // the night proceeds as usual
+$('winRunEnd').addEventListener('click', () => {   // finish here: the end panel, rewritten for a win — Continue performs the usual conveyance
+  $('winRunPanel').style.display = 'none';
+  $('endTitle').innerHTML = ic('party') + ' The shop is yours';
+  $('endBody').textContent = 'No more cycle. The next reader who walks in is a customer, not a successor.';
+  $('startOverBtn').textContent = 'Continue';
+  $('endPanel').style.display = 'block';
+});
 $('startOverBtn').addEventListener('click', () => {
   inheritCat = true;   // the run ended — the next owner inherits the cat (Roy, 2026-10-17)
   // every unsold book conveys (Codex review, 2026-10-18): arms books and
@@ -2221,6 +2253,7 @@ function fillTitleSave() {
   if (shards > 0) bits.push('✦ ' + shards);
   if (n > 0) bits.push(ic('album') + ' ' + n + '/100 collected');
   if (keptCasePlan && keptCasePlan.length > 2) bits.push(keptCasePlan.length + ' shelves kept');
+  if (wins > 0) bits.push(wins + (wins === 1 ? ' win' : ' wins'));
   $('titleSave').innerHTML = bits.length ? 'Welcome back — ' + bits.join(' · ') : '';
 }
 function makeTitleBooks() {
@@ -2351,7 +2384,7 @@ $('newGameBtn').addEventListener('click', () => {
   const hasContinue = !!loadRunSnapshot();
   if (hasContinue && !wipeArmed) { wipeArmed = true; $('newGameBtn').textContent = 'Erase save & start fresh?'; return; }
   wipeArmed = false;
-  shards = 0; unlocked = {}; boughtEver = {}; collected = {}; collectionsDone = {};
+  shards = 0; wins = 0; unlocked = {}; boughtEver = {}; collected = {}; collectionsDone = {};
   keptCasePlan = null; keptCap = 6; keptCats = null; keptStock = null; inheritCat = false;
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   storySeen = false;
